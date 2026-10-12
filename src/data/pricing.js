@@ -1,0 +1,52 @@
+export const pricing = [
+  {
+    id: "basic",
+    slug: "basic",
+    name: "Basic Plan",
+    price: 299,
+    currency: "USD",
+    billingPeriod: "month",
+    billingLabel: "/mo",
+    note: "$299.00 Plus Per Deletion Fees",
+    buttonLabel: "Choose Basic Plan",
+    href: "/get-started?plan=basic",
+    description: "Essential credit repair services.",
+    featured: false,
+
+    features: [
+      "Personal Info $10.",
+      "Inquiries $50.",
+      "Collections $75.",
+      "Public Records $150.",
+      "Debt Settlement: 15% (On Saved Amounts).",
+      "24/7 Online Access to Your Account.",
+      "Add Your Spouse for $150 Special!",
+      "Unlimited Bureau Disputes.",
+      "Unlimited Creditor Disputes.",
+      "Unlimited Collection Disputes.",
+    ],
+  },
+
+  {
+    id: "gold",
+    slug: "gold",
+    name: "Gold Plan",
+    price: 450,
+    currency: "USD",
+    billingPeriod: "month",
+    billingLabel: "/mo",
+    note: "$450.00 Plus Per Deletion Fees",
+    buttonLabel: "Choose Gold Plan",
+    href: "/get-started?plan=gold",
+    description: "Additional features and account support.",
+    featured: true,
+
+    features: [
+      "Free Setup.",
+      "FREE 24/7 Access.",
+      "Add Your Spouse for $229 Special.",
+      'Includes All "BASIC" Plan Features.',
+      "File Handled Directly by Our Owner.",
+    ],
+  },
+];

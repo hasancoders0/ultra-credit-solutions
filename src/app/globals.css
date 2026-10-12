@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+/* Ultra Credit Solutions USA - Design Tokens */
+
+:root {
+  --color-primary: #2852a0;
+  --color-primary-hover: #1e417f;
+
+  --color-cta: #ff6b81;
+  --color-cta-hover: #f4516c;
+
+  --color-accent: #007aff;
+
+  --color-background: #ffffff;
+  --color-background-light: #f9f9f9;
+  --color-background-muted: #eeeeee;
+
+  --color-heading: #081828;
+  --color-body: #666666;
+  --color-muted: #888888;
+  --color-footer-text: #d2d6dc;
+  --color-border: #eeeeee;
+
+  --container-width: 1200px;
+  --header-height: 80px;
+
+  --radius-small: 6px;
+  --radius-medium: 12px;
+  --radius-large: 20px;
+}
+
+/* Tailwind CSS v4 Theme */
+
+@theme inline {
+  --color-primary: #2852a0;
+  --color-primary-hover: #1e417f;
+
+  --color-cta: #ff6b81;
+  --color-cta-hover: #f4516c;
+
+  --color-accent: #007aff;
+
+  --color-background: #ffffff;
+  --color-background-light: #f9f9f9;
+  --color-background-muted: #eeeeee;
+
+  --color-heading: #081828;
+  --color-body: #666666;
+  --color-muted: #888888;
+  --color-footer-text: #d2d6dc;
+  --color-border: #eeeeee;
+
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-plus-jakarta);
+}
+
+/* Minimal Base Styles */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-height) + 20px);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-body);
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-plus-jakarta), Arial, Helvetica, sans-serif;
+}
+
+p {
+  margin-top: 0;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+img {
+  height: auto;
+}
+
+a {
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
