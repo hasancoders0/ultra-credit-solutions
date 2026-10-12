@@ -44,7 +44,7 @@ export default function MainNav() {
               <Link
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`group inline-flex items-center gap-1.5 whitespace-nowrap rounded-md py-2 text-[13px] font-medium transition-colors duration-200 xl:gap-2 xl:text-sm ${
+                className={`group inline-flex items-center gap-1.5 whitespace-nowrap rounded-md py-2 text-sm font-medium transition-colors duration-200 xl:gap-2 xl:text-base ${
                   isActive
                     ? "text-[#2852A0]"
                     : "text-[#5F6B7A] hover:text-[#2852A0]"

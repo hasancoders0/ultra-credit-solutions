@@ -11,7 +11,7 @@ export const siteInfo = {
 
   email: "jibon.c@ultracreditsolutions.net",
 
-  phone: "",
+  phone: "+19293864705",
 
   address:
     "3716 73rd Street, Suite 302B, Jackson Heights, NY 11372",
@@ -19,7 +19,7 @@ export const siteInfo = {
   socialLinks: {
     facebook: "https://www.facebook.com/Ultracreditsolutionsinc",
     instagram: "https://www.instagram.com/ultracreditsolutionsl/",
-    website: "",
+    linkedin: "https://www.linkedin.com/company/ultra-credit-solutions",
   },
 };
 

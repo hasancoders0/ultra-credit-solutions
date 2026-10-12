@@ -3,9 +3,9 @@ import Link from "next/link";
 
 import { footerContent, siteInfo, siteSettings } from "@/data/site";
 
-import { Mail, MapPin, ArrowUpRight } from "lucide-react";
+import { Mail, MapPin, ArrowUpRight, Phone } from "lucide-react";
 
-import { FaFacebookF, FaInstagram } from "react-icons/fa";
+import { FaFacebookF, FaInstagram, FaLinkedinIn } from "react-icons/fa";
 
 /* =========================================================
    SOCIAL LINKS
@@ -21,6 +21,11 @@ const socialLinks = [
     name: "Instagram",
     href: siteInfo.socialLinks.instagram,
     icon: FaInstagram,
+  },
+  {
+    name: "LinkedIn",
+    href: siteInfo.socialLinks.linkedin,
+    icon: FaLinkedinIn,
   },
 ].filter((social) => social.href);
 
@@ -51,7 +56,7 @@ export default function Footer() {
             >
               <Image
                 src={siteSettings.footerLogo}
-                alt="Ultra Credit Solutions USA"
+                alt={siteInfo.name}
                 width={220}
                 height={70}
                 priority
@@ -78,9 +83,9 @@ export default function Footer() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`Visit our ${name} profile`}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[#B8C4D5] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#FF6B81]/50 hover:bg-[#FF6B81] hover:text-[#081828]"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[#B8C4D5] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#FF6B81]/50 hover:bg-[#FF6B81] hover:text-[#081828] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B81]"
                     >
-                      <Icon className="h-[18px] w-[18px]" />
+                      <Icon aria-hidden="true" className="h-[18px] w-[18px]" />
                     </a>
                   ))}
                 </div>
@@ -152,63 +157,80 @@ export default function Footer() {
 
             <div className="mt-5 space-y-5">
               {/* Address */}
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.05]">
-                  <MapPin
-                    aria-hidden="true"
-                    className="h-[18px] w-[18px] text-[#FF8294]"
-                    strokeWidth={1.8}
-                  />
-                </div>
+              {siteInfo.address && (
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.05]">
+                    <MapPin
+                      aria-hidden="true"
+                      className="h-[18px] w-[18px] text-[#FF8294]"
+                      strokeWidth={1.8}
+                    />
+                  </div>
 
-                <div className="min-w-0 flex-1 pt-0.5">
-                  <h3 className="text-sm font-medium text-white">
-                    Our Address
-                  </h3>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <h3 className="text-sm font-medium text-white">
+                      Our Address
+                    </h3>
 
-                  <p className="mt-1.5 break-words text-sm leading-6 text-[#AAB7C8]">
-                    {footerContent.contact.address}
-                  </p>
+                    <p className="mt-1.5 break-words text-sm leading-6 text-[#AAB7C8]">
+                      {siteInfo.address}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Email */}
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.05]">
-                  <Mail
-                    aria-hidden="true"
-                    className="h-[18px] w-[18px] text-[#FF8294]"
-                    strokeWidth={1.8}
-                  />
-                </div>
+              {siteInfo.email && (
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.05]">
+                    <Mail
+                      aria-hidden="true"
+                      className="h-[18px] w-[18px] text-[#FF8294]"
+                      strokeWidth={1.8}
+                    />
+                  </div>
 
-                <div className="min-w-0 flex-1 pt-0.5">
-                  <h3 className="text-sm font-medium text-white">
-                    Email Address
-                  </h3>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <h3 className="text-sm font-medium text-white">
+                      Email Address
+                    </h3>
 
-                  <a
-                    href={`mailto:${footerContent.contact.email}`}
-                    className="mt-1.5 inline-block break-all text-sm leading-6 text-[#AAB7C8] transition-colors duration-200 hover:text-white"
-                  >
-                    {footerContent.contact.email}
-                  </a>
+                    <a
+                      href={`mailto:${siteInfo.email}`}
+                      className="mt-1.5 inline-block break-all text-sm leading-6 text-[#AAB7C8] transition-colors duration-200 hover:text-white"
+                    >
+                      {siteInfo.email}
+                    </a>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Phone */}
+              {siteInfo.phone && (
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.05]">
+                    <Phone
+                      aria-hidden="true"
+                      className="h-[18px] w-[18px] text-[#FF8294]"
+                      strokeWidth={1.8}
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <h3 className="text-sm font-medium text-white">
+                      Phone Number
+                    </h3>
+
+                    <a
+                      href={`tel:${siteInfo.phone.replace(/[^\d+]/g, "")}`}
+                      className="mt-1.5 inline-block text-sm leading-6 text-[#AAB7C8] transition-colors duration-200 hover:text-white"
+                    >
+                      {siteInfo.phone}
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
-
-            {/* Contact Button */}
-            <Link
-              href="/contact"
-              className="group mt-6 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#FF6B81] px-4 py-2.5 text-sm font-semibold !text-[#081828] transition-colors duration-200 hover:bg-[#FF8294] hover:!text-[#081828]"
-            >
-              <span>Contact Us</span>
-
-              <ArrowUpRight
-                aria-hidden="true"
-                className="h-4 w-4 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-              />
-            </Link>
           </div>
         </div>
 

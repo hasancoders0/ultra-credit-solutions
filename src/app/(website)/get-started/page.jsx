@@ -11,21 +11,12 @@ export const metadata = {
     "Contact Ultra Credit Solutions to discuss your credit repair questions, learn about available services, and explore the next steps.",
 };
 
-export default async function GetStartedPage({ searchParams }) {
-  const params = await searchParams;
-
-  const requestedPlan =
-    typeof params?.plan === "string" ? params.plan.toLowerCase() : "";
-
-  const selectedPlan = ["basic", "gold"].includes(requestedPlan)
-    ? requestedPlan
-    : "";
-
+export default function GetStartedPage() {
   return (
     <main>
       <Hero />
 
-      <LeadForm selectedPlan={selectedPlan} />
+      <LeadForm />
 
       <Process />
 

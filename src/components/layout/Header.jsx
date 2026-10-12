@@ -3,8 +3,6 @@ import Link from "next/link";
 
 import MainNav from "@/components/layout/MainNav";
 import MobileNav from "@/components/layout/MobileNav";
-import { ArrowRight } from "lucide-react";
-import { headerActions } from "@/data/navigation";
 import { siteSettings } from "@/data/site";
 
 export default function Header() {
@@ -32,24 +30,16 @@ export default function Header() {
           <MainNav />
         </div>
 
-        {/* Desktop Get Started Button */}
+        {/* Desktop Client Login */}
         <div className="hidden shrink-0 lg:flex lg:items-center">
-          {headerActions.map((action) => (
-            <Link
-              key={action.href}
-              href={action.href}
-              className="group inline-flex min-h-[46px] items-center justify-center gap-2 rounded-lg border border-[#2852A0] bg-[#2852A0] px-6 py-3 text-sm font-semibold !text-white shadow-sm transition-colors duration-200 hover:border-[#1E417F] hover:bg-[#1E417F] hover:!text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2852A0]"
-            >
-              <span>{action.label}</span>
-
-              <ArrowRight
-                size={17}
-                strokeWidth={2}
-                aria-hidden="true"
-                className="transition-transform duration-200 group-hover:translate-x-1"
-              />
-            </Link>
-          ))}
+          <a
+            href="https://www.secureclientaccess.com/login"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="whitespace-nowrap text-sm font-semibold text-[#2852A0] transition-colors duration-200 hover:text-[#FF6B81] focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2852A0]"
+          >
+            Already a client? Login
+          </a>
         </div>
 
         {/* Mobile Navigation */}
