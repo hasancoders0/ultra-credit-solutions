@@ -3,82 +3,65 @@
 import Link from "next/link";
 import {
   Search,
-  Plus,
   SlidersHorizontal,
-  X,
+  ChevronDown,
+  Plus,
 } from "lucide-react";
 
 export default function BlogToolbar({
   search,
-  setSearch,
+  onSearchChange,
   category,
-  setCategory,
+  onCategoryChange,
   status,
-  setStatus,
+  onStatusChange,
   categories,
-  onReset,
 }) {
-  const hasFilters =
-    search !== "" ||
-    category !== "all" ||
-    status !== "all";
+  const selectClass =
+    "h-10 w-full appearance-none rounded-lg border border-[#EEEEEE] bg-white pl-9 pr-8 text-sm text-[#081828] outline-none transition hover:border-[#D8DDE5] focus:border-[#2852A0] focus:ring-2 focus:ring-blue-100";
 
   return (
-    <div className="rounded-2xl border border-[#EEEEEE] bg-white p-4 sm:p-5">
-      {/* Toolbar Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-[#081828]">
-            All Blog Posts
-          </h2>
-
-          <p className="mt-1 text-sm text-[#888888]">
-            Manage your website articles.
-          </p>
-        </div>
-
-        <Link
-          href="/admin/blog/new"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2852A0] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1f4388]"
-        >
-          <Plus size={18} />
-          Create New Post
-        </Link>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center">
-        {/* Search */}
-        <div className="relative flex-1">
+    <div className="space-y-3 border-b border-[#EEEEEE] p-3 sm:p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-[340px]">
           <Search
-            size={18}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#888888]"
+            size={17}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#999999]"
           />
 
           <input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by title, author, or tag..."
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search blog posts..."
             aria-label="Search blog posts"
-            className="h-12 w-full rounded-xl border border-[#EEEEEE] bg-[#F9F9F9] pl-11 pr-4 text-sm text-[#081828] outline-none transition placeholder:text-[#999999] focus:border-[#2852A0] focus:bg-white"
+            className="h-10 w-full rounded-lg border border-[#EEEEEE] bg-white pl-9 pr-3 text-sm text-[#081828] outline-none placeholder:text-[#999999] focus:border-[#2852A0] focus:ring-2 focus:ring-blue-100"
           />
         </div>
 
-        {/* Category Filter */}
-        <div className="relative">
+        <Link
+          href="/admin/blog/new"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#2852A0] px-4 text-sm font-medium text-white transition hover:bg-[#1F4386]"
+        >
+          <Plus size={17} />
+          Create Post
+        </Link>
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative sm:w-[220px]">
           <SlidersHorizontal
-            size={16}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#888888]"
+            size={15}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#888888]"
           />
 
           <select
             value={category}
-            onChange={(event) => setCategory(event.target.value)}
+            onChange={(event) => onCategoryChange(event.target.value)}
             aria-label="Filter by category"
-            className="h-12 w-full min-w-44 appearance-none rounded-xl border border-[#EEEEEE] bg-white pl-10 pr-8 text-sm text-[#666666] outline-none focus:border-[#2852A0]"
+            className={selectClass}
           >
-            <option value="all">All Categories</option>
+            <option value="All">All categories</option>
 
             {categories.map((item) => (
               <option key={item} value={item}>
@@ -86,31 +69,36 @@ export default function BlogToolbar({
               </option>
             ))}
           </select>
+
+          <ChevronDown
+            size={14}
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#888888]"
+          />
         </div>
 
-        {/* Status Filter */}
-        <select
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
-          aria-label="Filter by status"
-          className="h-12 min-w-36 rounded-xl border border-[#EEEEEE] bg-white px-4 text-sm text-[#666666] outline-none focus:border-[#2852A0]"
-        >
-          <option value="all">All Statuses</option>
-          <option value="published">Published</option>
-          <option value="draft">Draft</option>
-        </select>
+        <div className="relative sm:w-[170px]">
+          <SlidersHorizontal
+            size={15}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#888888]"
+          />
 
-        {/* Reset Filters */}
-        {hasFilters && (
-          <button
-            type="button"
-            onClick={onReset}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-medium text-[#666666] transition hover:bg-[#F9F9F9] hover:text-[#081828]"
+          <select
+            value={status}
+            onChange={(event) => onStatusChange(event.target.value)}
+            aria-label="Filter by post status"
+            className={selectClass}
           >
-            <X size={16} />
-            Reset
-          </button>
-        )}
+            <option value="All">All statuses</option>
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+            <option value="scheduled">Scheduled</option>
+          </select>
+
+          <ChevronDown
+            size={14}
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#888888]"
+          />
+        </div>
       </div>
     </div>
   );

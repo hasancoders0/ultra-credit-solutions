@@ -8,7 +8,7 @@ import CTA from "@/components/pricing/CTA";
 export const metadata = {
   title: "Pricing Plans | Ultra Credit Solutions Inc.",
   description:
-    "Explore Ultra Credit Solutions Inc. pricing plans, compare listed features, understand additional fees, and learn how to get started.",
+    "Explore Ultra Credit Solutions Inc. pricing plans, compare listed features, understand additional fees, and learn how to Make an Appointment.",
 };
 
 export default function PricingPage() {

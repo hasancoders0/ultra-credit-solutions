@@ -1,9 +1,6 @@
-import LocationForm from "@/components/admin/locations/LocationForm";
+"use client";
 
-export const metadata = {
-  title: "Add Location | Ultra Credit Solutions",
-  description: "Create a new location page.",
-};
+import LocationForm from "@/components/admin/locations/LocationForm";
 
 export default function NewLocationPage() {
   return <LocationForm />;

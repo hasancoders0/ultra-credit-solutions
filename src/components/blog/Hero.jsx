@@ -1,33 +1,20 @@
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 
 export default function Hero() {
   return (
     <section className="bg-[#F9F9F9]">
-      <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20 lg:py-24">
-        <div className="mb-6 flex items-center gap-2 text-sm text-[#888888]">
-          <Link href="/" className="transition hover:text-[#2852A0]">
-            Home
-          </Link>
+      <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        <div className="max-w-2xl">
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[#2852A0]">
+            Ultra Credit Solutions USA
+          </p>
 
-          <ChevronRight size={15} />
-
-          <span className="text-[#2852A0]">Blog</span>
-        </div>
-
-        <div className="max-w-3xl">
-          <span className="inline-flex rounded-full bg-[#2852A0]/10 px-4 py-2 text-sm font-semibold text-[#2852A0]">
-            Credit Education & Resources
-          </span>
-
-          <h1 className="mt-5 text-4xl font-bold leading-tight tracking-tight text-[#081828] sm:text-5xl lg:text-6xl">
-            Knowledge to Help You Understand Your Credit
+          <h1 className="text-3xl font-bold tracking-tight text-[#081828] sm:text-4xl">
+            Credit Education Blog
           </h1>
 
-          <p className="mt-6 max-w-2xl text-base leading-8 text-[#666666] sm:text-lg">
-            Explore helpful articles about credit reports, credit scores,
-            credit reporting, and financial habits. Our goal is to help you
-            understand your credit information and make informed decisions.
+          <p className="mt-3 max-w-xl text-sm leading-6 text-[#666666] sm:text-base">
+            Clear, practical guidance to help you understand credit reports,
+            credit scores, and healthier credit habits.
           </p>
         </div>
       </div>

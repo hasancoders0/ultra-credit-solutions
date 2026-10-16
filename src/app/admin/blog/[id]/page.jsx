@@ -1,18 +1,11 @@
-import { notFound } from "next/navigation";
+import BlogPostForm from "@/components/admin/blog/BlogPostForm";
 
-import blogs from "@/data/blog";
-import BlogForm from "@/components/admin/blog/BlogForm";
+export const metadata = {
+  title: "Edit Blog Post | Ultra Credit Solutions",
+};
 
-export default async function EditBlogPage({ params }) {
+export default async function EditBlogPostPage({ params }) {
   const { id } = await params;
 
-  const blog = blogs.find(
-    (item) => String(item.id) === String(id)
-  );
-
-  if (!blog) {
-    notFound();
-  }
-
-  return <BlogForm initialBlog={blog} />;
+  return <BlogPostForm postId={id} />;
 }

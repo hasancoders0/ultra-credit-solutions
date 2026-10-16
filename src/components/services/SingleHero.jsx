@@ -40,10 +40,10 @@ export default function SingleHero({ service }) {
 
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
-                href="/get-started"
+                href="/appointment"
                 className="inline-flex items-center gap-2 rounded-lg bg-[#FF6B81] px-6 py-3.5 font-semibold text-white transition hover:bg-[#f45570]"
               >
-                Get Started
+                Make an Appointment
                 <ArrowRight size={18} />
               </Link>
 

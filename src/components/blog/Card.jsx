@@ -1,8 +1,8 @@
-import Link from "next/link";
-import { ArrowUpRight, CalendarDays, UserRound } from "lucide-react";
 
-export default function Card({ blog }) {
-  const date = new Date(`${blog.publishedAt}T12:00:00`).toLocaleDateString(
+import Link from "next/link";
+
+export default function BlogCard({ post }) {
+  const formattedDate = new Date(post.publishedAt).toLocaleDateString(
     "en-US",
     {
       month: "short",
@@ -13,51 +13,55 @@ export default function Card({ blog }) {
   );
 
   return (
-    <article className="group overflow-hidden rounded-2xl border border-[#EEEEEE] bg-white transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-[#EEEEEE] bg-white transition-shadow duration-300 hover:shadow-md">
       <Link
-        href={`/blog/${blog.slug}`}
-        className="block overflow-hidden"
-        aria-label={`Read ${blog.title}`}
+        href={`/blog/${post.slug}`}
+        className="block aspect-[16/9] overflow-hidden bg-[#F9F9F9]"
+        aria-label={`Read ${post.title}`}
       >
-        <img
-          src={blog.featuredImage.src}
-          alt={blog.featuredImage.alt}
-          loading="lazy"
-          className="h-56 w-full object-cover transition duration-500 group-hover:scale-105"
-        />
+        {post.featuredImage?.src ? (
+          <img
+            src={post.featuredImage.src}
+            alt={post.featuredImage.alt || post.title}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-[#888888]">
+            Credit Education
+          </div>
+        )}
       </Link>
 
-      <div className="p-6 sm:p-7">
-        <span className="inline-flex rounded-full bg-[#2852A0]/10 px-3 py-1.5 text-xs font-semibold text-[#2852A0]">
-          {blog.category}
-        </span>
-
-        <h2 className="mt-4 text-xl font-bold leading-snug text-[#081828] transition group-hover:text-[#2852A0] sm:text-2xl">
-          <Link href={`/blog/${blog.slug}`}>{blog.title}</Link>
-        </h2>
-
-        <p className="mt-3 line-clamp-3 text-sm leading-7 text-[#666666]">
-          {blog.excerpt}
-        </p>
-
-        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#EEEEEE] pt-4 text-xs text-[#888888]">
-          <span className="flex items-center gap-1.5">
-            <CalendarDays size={15} />
-            {date}
+      <div className="flex flex-1 flex-col p-4">
+        <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+          <span className="font-semibold text-[#2852A0]">
+            {post.category}
           </span>
-
-          <span className="flex items-center gap-1.5">
-            <UserRound size={15} />
-            {blog.author}
-          </span>
+          <span className="text-[#CCCCCC]">•</span>
+          <time dateTime={post.publishedAt} className="text-[#888888]">
+            {formattedDate}
+          </time>
         </div>
 
+        <h3 className="text-base font-bold leading-snug text-[#081828]">
+          <Link
+            href={`/blog/${post.slug}`}
+            className="transition-colors hover:text-[#2852A0]"
+          >
+            {post.title}
+          </Link>
+        </h3>
+
+        <p className="mt-2 line-clamp-2 text-sm leading-5 text-[#777777]">
+          {post.excerpt}
+        </p>
+
         <Link
-          href={`/blog/${blog.slug}`}
-          className="mt-5 inline-flex items-center gap-2 font-semibold text-[#2852A0] transition hover:text-[#FF6B81]"
+          href={`/blog/${post.slug}`}
+          className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#2852A0] hover:text-[#FF6B81]"
         >
-          Read Article
-          <ArrowUpRight size={18} />
+          Read Article <span aria-hidden="true">→</span>
         </Link>
       </div>
     </article>

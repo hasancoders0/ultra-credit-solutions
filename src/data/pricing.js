@@ -9,7 +9,7 @@ export const pricing = [
     billingLabel: "/mo",
     note: "$299.00 Plus Per Deletion Fees",
     buttonLabel: "Choose Basic Plan",
-    href: "/get-started?plan=basic",
+    href: "/appointment",
     description: "Essential credit repair services.",
     featured: false,
 
@@ -37,7 +37,7 @@ export const pricing = [
     billingLabel: "/mo",
     note: "$450.00 Plus Per Deletion Fees",
     buttonLabel: "Choose Gold Plan",
-    href: "/get-started?plan=gold",
+    href: "/appointment",
     description: "Additional features and account support.",
     featured: true,
 

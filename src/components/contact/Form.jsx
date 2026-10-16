@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -6,24 +7,16 @@ import {
   CheckCircle2,
   LoaderCircle,
   Mail,
+  MapPin,
   MessageCircle,
 } from "lucide-react";
+import { siteInfo } from "@/data/site";
 
 const initialForm = {
-  firstName: "",
-  lastName: "",
+  fullName: "",
   email: "",
-  subject: "",
   message: "",
 };
-
-const subjects = [
-  "Credit Repair Services",
-  "Questions About Pricing",
-  "Existing Customer Support",
-  "General Inquiry",
-  "Other",
-];
 
 export default function Form() {
   const [form, setForm] = useState(initialForm);
@@ -59,7 +52,12 @@ export default function Form() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          // Compatibility with an API that still expects firstName/lastName.
+          firstName: form.fullName.trim(),
+          lastName: "",
+        }),
       });
 
       const result = await response.json();
@@ -82,91 +80,117 @@ export default function Form() {
   }
 
   const inputClass =
-    "w-full rounded-lg border border-[#EEEEEE] bg-[#F9F9F9] px-4 py-3.5 text-sm text-[#081828] outline-none transition placeholder:text-[#888888] focus:border-[#2852A0] focus:bg-white focus:ring-2 focus:ring-[#2852A0]/10";
+    "w-full rounded-lg border border-[#EEEEEE] bg-[#F9F9F9] px-4 py-3 text-sm text-[#081828] outline-none transition placeholder:text-[#888888] focus:border-[#2852A0] focus:bg-white focus:ring-2 focus:ring-[#2852A0]/10";
 
   return (
-    <section className="relative overflow-hidden bg-[#2852A0]">
-      <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/5 blur-3xl" />
-      <div className="absolute -bottom-32 left-1/3 h-80 w-80 rounded-full bg-[#FF6B81]/10 blur-3xl" />
-
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-5 py-16 sm:py-20 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:gap-16 lg:py-24">
-        <div className="text-white">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium">
-            <MessageCircle size={16} />
+    <section className="px-5 py-10 sm:py-12">
+      <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:gap-12">
+        {/* Contact Information */}
+        <div>
+          <span className="inline-flex items-center gap-2 rounded-full bg-[#2852A0]/10 px-3 py-1.5 text-xs font-semibold text-[#2852A0] sm:text-sm">
+            <MessageCircle size={15} />
             Contact Our Team
           </span>
 
-          <h2 className="mt-6 text-3xl font-bold leading-tight sm:text-4xl">
-            Have a Question?
-            <br />
-            We're Here to Help.
+          <h2 className="mt-4 text-2xl font-bold leading-tight text-[#081828] sm:text-3xl">
+            How Can We Help You?
           </h2>
 
-          <p className="mt-5 max-w-lg text-base leading-7 text-white/80">
-            Send us your questions or concerns. Share a little information
-            about what you need, and our team can follow up with you.
+          <p className="mt-3 text-sm leading-6 text-[#666666] sm:text-base">
+            Have a question about our services? Send us a message, and our team
+            will review your inquiry and get back to you.
           </p>
 
-          <div className="mt-9 flex items-start gap-4 rounded-xl border border-white/15 bg-white/10 p-5">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white text-[#2852A0]">
-              <Mail size={21} />
-            </div>
+          <div className="mt-6 space-y-4">
+            {/* Email */}
+            <a
+              href={`mailto:${siteInfo.email}`}
+              className="group flex items-start gap-3 rounded-xl border border-[#EEEEEE] p-4 transition hover:border-[#2852A0]/30 hover:bg-[#F9F9F9]"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#FF6B81]/10 text-[#FF6B81]">
+                <Mail size={20} />
+              </div>
 
-            <div className="min-w-0">
-              <h3 className="font-semibold">Prefer Email?</h3>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-semibold text-[#081828]">
+                  Email Us
+                </h3>
+                <p className="mt-1 break-all text-sm text-[#666666]">
+                  {siteInfo.email}
+                </p>
+              </div>
 
-              <p className="mt-1 text-sm text-white/75">
-                You can also reach us directly at:
-              </p>
+              <ArrowRight
+                size={17}
+                className="mt-1 shrink-0 text-[#888888] transition group-hover:text-[#2852A0]"
+              />
+            </a>
 
-              <a
-                href="mailto:jibon.c@ultracreditsolutions.net"
-                className="mt-2 inline-block break-all text-sm font-medium text-white underline decoration-white/40 underline-offset-4 transition hover:decoration-white"
-              >
-                jibon.c@ultracreditsolutions.net
-              </a>
-            </div>
+            {/* Office Address */}
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                siteInfo.address
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-start gap-3 rounded-xl border border-[#EEEEEE] p-4 transition hover:border-[#2852A0]/30 hover:bg-[#F9F9F9]"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#2852A0]/10 text-[#2852A0]">
+                <MapPin size={20} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-semibold text-[#081828]">
+                  Our Office
+                </h3>
+                <p className="mt-1 text-sm leading-5 text-[#666666]">
+                  {siteInfo.address}
+                </p>
+              </div>
+
+              <ArrowRight
+                size={17}
+                className="mt-1 shrink-0 text-[#888888] transition group-hover:text-[#2852A0]"
+              />
+            </a>
           </div>
 
-          <div className="mt-8">
-            <p className="text-sm font-semibold text-white">
-              Ready to take the next step?
-            </p>
-
+          <div className="mt-5">
             <a
-              href="/get-started"
-              className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-white transition hover:text-white/80"
+              href="/appointment"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#2852A0] transition hover:text-[#FF6B81]"
             >
-              Get Started with Our Services
+              Make an Appointment
               <ArrowRight size={17} />
             </a>
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white p-5 shadow-2xl shadow-black/10 sm:p-8 lg:p-10">
-          <div className="mb-7">
-            <h3 className="text-2xl font-bold text-[#081828]">
+        {/* Compact Contact Form */}
+        <div className="rounded-2xl border border-[#EEEEEE] bg-white p-5 shadow-[0_4px_24px_rgba(8,24,40,0.05)] sm:p-7">
+          <div className="mb-5">
+            <h2 className="text-xl font-bold text-[#081828] sm:text-2xl">
               Send Us a Message
-            </h3>
+            </h2>
 
             <p className="mt-2 text-sm leading-6 text-[#666666]">
-              Complete the form below, and we'll have your message to review.
+              Fill out the form below, and our team will be in touch.
             </p>
           </div>
 
           {status === "success" ? (
             <div
               role="status"
-              className="rounded-xl border border-green-200 bg-green-50 px-6 py-10 text-center"
+              className="rounded-xl border border-green-200 bg-green-50 px-5 py-8 text-center"
             >
               <CheckCircle2
-                size={44}
+                size={40}
                 className="mx-auto text-green-600"
               />
 
-              <h4 className="mt-4 text-xl font-semibold text-[#081828]">
+              <h3 className="mt-3 text-lg font-semibold text-[#081828]">
                 Message Submitted!
-              </h4>
+              </h3>
 
               <p className="mt-2 text-sm leading-6 text-[#666666]">
                 Thank you for contacting us. Your message has been submitted
@@ -176,63 +200,40 @@ export default function Form() {
               <button
                 type="button"
                 onClick={() => setStatus("idle")}
-                className="mt-5 text-sm font-semibold text-[#2852A0] hover:underline"
+                className="mt-4 text-sm font-semibold text-[#2852A0] hover:underline"
               >
                 Send Another Message
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <label
-                    htmlFor="firstName"
-                    className="mb-2 block text-sm font-medium text-[#081828]"
-                  >
-                    First Name <span className="text-[#FF6B81]">*</span>
-                  </label>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="fullName"
+                  className="mb-1.5 block text-sm font-medium text-[#081828]"
+                >
+                  Full Name <span className="text-[#FF6B81]">*</span>
+                </label>
 
-                  <input
-                    id="firstName"
-                    name="firstName"
-                    type="text"
-                    autoComplete="given-name"
-                    placeholder="Your first name"
-                    value={form.firstName}
-                    onChange={handleChange}
-                    className={inputClass}
-                    required
-                    maxLength={80}
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="lastName"
-                    className="mb-2 block text-sm font-medium text-[#081828]"
-                  >
-                    Last Name <span className="text-[#FF6B81]">*</span>
-                  </label>
-
-                  <input
-                    id="lastName"
-                    name="lastName"
-                    type="text"
-                    autoComplete="family-name"
-                    placeholder="Your last name"
-                    value={form.lastName}
-                    onChange={handleChange}
-                    className={inputClass}
-                    required
-                    maxLength={80}
-                  />
-                </div>
+                <input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Enter your full name"
+                  value={form.fullName}
+                  onChange={handleChange}
+                  className={inputClass}
+                  required
+                  minLength={2}
+                  maxLength={160}
+                />
               </div>
 
               <div>
                 <label
                   htmlFor="email"
-                  className="mb-2 block text-sm font-medium text-[#081828]"
+                  className="mb-1.5 block text-sm font-medium text-[#081828]"
                 >
                   Email Address <span className="text-[#FF6B81]">*</span>
                 </label>
@@ -253,39 +254,8 @@ export default function Form() {
 
               <div>
                 <label
-                  htmlFor="subject"
-                  className="mb-2 block text-sm font-medium text-[#081828]"
-                >
-                  What Can We Help You With?{" "}
-                  <span className="text-[#FF6B81]">*</span>
-                </label>
-
-                <select
-                  id="subject"
-                  name="subject"
-                  value={form.subject}
-                  onChange={handleChange}
-                  className={`${inputClass} ${
-                    !form.subject ? "text-[#888888]" : ""
-                  }`}
-                  required
-                >
-                  <option value="" disabled>
-                    Select a topic
-                  </option>
-
-                  {subjects.map((subject) => (
-                    <option key={subject} value={subject}>
-                      {subject}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label
                   htmlFor="message"
-                  className="mb-2 block text-sm font-medium text-[#081828]"
+                  className="mb-1.5 block text-sm font-medium text-[#081828]"
                 >
                   Your Message <span className="text-[#FF6B81]">*</span>
                 </label>
@@ -293,8 +263,8 @@ export default function Form() {
                 <textarea
                   id="message"
                   name="message"
-                  rows={5}
-                  placeholder="Tell us how we can help..."
+                  rows={4}
+                  placeholder="How can we help you?"
                   value={form.message}
                   onChange={handleChange}
                   className={`${inputClass} resize-y`}
@@ -315,13 +285,13 @@ export default function Form() {
 
               <p className="text-xs leading-5 text-[#888888]">
                 Please do not include your Social Security number, passwords,
-                or complete credit report in this message.
+                or complete credit report in your message.
               </p>
 
               <button
                 type="submit"
                 disabled={status === "loading"}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#FF6B81] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#f55770] disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#FF6B81] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#f55770] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {status === "loading" ? (
                   <>
@@ -330,7 +300,7 @@ export default function Form() {
                   </>
                 ) : (
                   <>
-                    Submit Message
+                    Send Message
                     <ArrowRight size={18} />
                   </>
                 )}

@@ -10,7 +10,7 @@ export default function Hero() {
 
       <div className="relative mx-auto max-w-5xl text-center">
         <span className="inline-flex items-center rounded-full border border-[#2852A0]/10 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#2852A0]">
-          Get Started
+          Make an Appointment
         </span>
 
         <h1 className="mx-auto mt-6 max-w-4xl text-3xl font-bold leading-tight tracking-tight text-[#081828] sm:text-4xl lg:text-5xl">
@@ -41,7 +41,7 @@ export default function Hero() {
         </div>
 
         <Link
-          href="#get-started-form"
+          href="#appointment-form"
           className="mt-9 inline-flex items-center justify-center gap-2 rounded-lg bg-[#2852A0] !text-white px-7 py-4 text-sm font-semibold transition hover:bg-[#204483]"
         >
           Complete Your Inquiry

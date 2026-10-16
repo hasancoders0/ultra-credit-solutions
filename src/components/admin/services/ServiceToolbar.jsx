@@ -1,86 +1,79 @@
+
 "use client";
 
-import Link from "next/link";
-import {
-  Search,
-  Plus,
-  X,
-} from "lucide-react";
+import { Plus, Search, ArrowUpDown } from "lucide-react";
 
 export default function ServiceToolbar({
   search,
-  setSearch,
-  status,
-  setStatus,
-  onReset,
+  onSearchChange,
+  statusFilter,
+  onStatusChange,
+  sortBy,
+  onSortChange,
+  total,
+  filteredTotal,
+  onAdd,
 }) {
-  const hasFilters =
-    search !== "" || status !== "all";
-
   return (
-    <div className="rounded-2xl border border-[#EEEEEE] bg-white p-4 sm:p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-[#081828]">
-            All Services
-          </h2>
-
-          <p className="mt-1 text-sm text-[#888888]">
-            Manage your website services.
-          </p>
-        </div>
-
-        <Link
-          href="/admin/services/new"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2852A0] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1f4388]"
-        >
-          <Plus size={18} />
-          Add New Service
-        </Link>
+    <div className="flex flex-col gap-4 border-b border-[#EEEEEE] p-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h2 className="text-base font-semibold text-[#081828]">
+          All Services
+        </h2>
+        <p className="mt-1 text-xs text-[#888888]">
+          Showing {filteredTotal} of {total} services
+        </p>
       </div>
 
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <div className="relative min-w-0 sm:w-56">
           <Search
-            size={18}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#888888]"
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999]"
           />
-
           <input
             type="search"
             value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
+            onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Search services..."
             aria-label="Search services"
-            className="h-12 w-full rounded-xl border border-[#EEEEEE] bg-[#F9F9F9] pl-11 pr-4 text-sm text-[#081828] outline-none transition placeholder:text-[#999999] focus:border-[#2852A0] focus:bg-white"
+            className="h-10 w-full rounded-lg border border-[#EEEEEE] bg-white pl-9 pr-3 text-sm outline-none placeholder:text-[#AAAAAA] focus:border-[#2852A0] focus:ring-2 focus:ring-blue-100"
           />
         </div>
 
         <select
-          value={status}
-          onChange={(event) =>
-            setStatus(event.target.value)
-          }
+          value={statusFilter}
+          onChange={(event) => onStatusChange(event.target.value)}
           aria-label="Filter services by status"
-          className="h-12 min-w-40 rounded-xl border border-[#EEEEEE] bg-white px-4 text-sm text-[#666666] outline-none focus:border-[#2852A0]"
+          className="h-10 rounded-lg border border-[#EEEEEE] bg-white px-3 text-sm text-[#555555] outline-none focus:border-[#2852A0]"
         >
-          <option value="all">All Services</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
+          <option value="all">All Statuses</option>
+          <option value="published">Published</option>
+          <option value="draft">Draft</option>
         </select>
 
-        {hasFilters && (
-          <button
-            type="button"
-            onClick={onReset}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-medium text-[#666666] transition hover:bg-[#F9F9F9] hover:text-[#081828]"
+        <label className="flex h-10 items-center gap-2 rounded-lg border border-[#EEEEEE] px-3">
+          <ArrowUpDown size={15} className="text-[#888888]" />
+          <select
+            value={sortBy}
+            onChange={(event) => onSortChange(event.target.value)}
+            aria-label="Sort services"
+            className="min-w-0 bg-transparent text-sm text-[#555555] outline-none"
           >
-            <X size={16} />
-            Reset
-          </button>
-        )}
+            <option value="order">Display Order</option>
+            <option value="title">Title</option>
+            <option value="updated">Recently Updated</option>
+          </select>
+        </label>
+
+        <button
+          type="button"
+          onClick={onAdd}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#2852A0] px-4 text-sm font-medium text-white transition hover:bg-[#1F4386]"
+        >
+          <Plus size={16} />
+          Add Service
+        </button>
       </div>
     </div>
   );

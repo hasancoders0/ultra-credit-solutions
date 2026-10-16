@@ -24,10 +24,10 @@ export default function LocationHero() {
 
           <div className="mt-8 flex flex-wrap gap-4">
             <Link
-              href="/get-started"
+              href="/appointment"
               className="inline-flex items-center gap-2 rounded-xl bg-[#2852A0] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#1f4388]"
             >
-              Get Started
+              Make an Appointment
               <ArrowRight size={17} />
             </Link>
 

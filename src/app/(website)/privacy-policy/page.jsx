@@ -372,7 +372,7 @@ export default function PrivacyPolicyPage() {
           <div className="mt-4 rounded-xl bg-[#F9F9F9] p-5 sm:p-6">
             <p className="text-sm leading-6 text-[#666666]">
               <strong className="text-[#081828]">Last Updated:</strong>{" "}
-              [Add Last Updated Date]
+              October 15, 2026
             </p>
 
             <p className="mt-2 text-xs leading-6 text-[#888888]">

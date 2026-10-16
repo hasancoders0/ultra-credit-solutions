@@ -3,7 +3,7 @@ const steps = [
     number: "01",
     title: "Tell Us Your Concerns",
     description:
-      "Share your credit-related concerns through our Get Started form so we can better understand your needs.",
+      "Share your credit-related concerns through our Make an Appointment form so we can better understand your needs.",
   },
   {
     number: "02",

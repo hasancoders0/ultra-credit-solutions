@@ -38,8 +38,8 @@ export const mainNavigation = [
 
 export const headerActions = [
   {
-    label: "Get Started",
-    href: "/get-started",
+    label: "Make an Appointment",
+    href: "/appointment",
     variant: "primary",
   },
 ];

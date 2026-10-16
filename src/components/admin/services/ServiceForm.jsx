@@ -1,566 +1,670 @@
+
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  ImagePlus,
-  Save,
-  Send,
-  X,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, ImagePlus, Save, Trash2, Upload, Plus } from "lucide-react";
 
-const inputClass =
-  "w-full rounded-xl border border-[#EEEEEE] px-4 py-3 text-sm text-[#081828] outline-none transition placeholder:text-[#AAAAAA] focus:border-[#2852A0]";
-
-function createSlug(value) {
+function createSlug(value = "") {
   return value
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
-export default function ServiceForm({ initialService = null }) {
-  const [title, setTitle] = useState(initialService?.title || "");
-  const [slug, setSlug] = useState(initialService?.slug || "");
+const inputClass =
+  "mt-1.5 h-11 w-full rounded-lg border border-[#EEEEEE] bg-white px-3 text-sm text-[#081828] outline-none placeholder:text-[#AAAAAA] focus:border-[#2852A0] focus:ring-2 focus:ring-blue-100";
 
-  const [description, setDescription] = useState(
-    initialService?.description || ""
-  );
+const textareaClass =
+  "mt-1.5 w-full resize-y rounded-lg border border-[#EEEEEE] bg-white p-3 text-sm leading-6 text-[#081828] outline-none placeholder:text-[#AAAAAA] focus:border-[#2852A0] focus:ring-2 focus:ring-blue-100";
 
-  const [introduction, setIntroduction] = useState(
-    initialService?.content?.introduction || ""
-  );
+const labelClass = "text-sm font-medium text-[#081828]";
 
-  const [sections, setSections] = useState(
-    initialService?.content?.sections?.map((section) => ({
-      heading: section.heading || "",
-      content: section.content || section.paragraphs?.join("\n\n") || "",
-    })) || [{ heading: "", content: "" }]
-  );
+export default function ServiceForm({
+  initialService = null,
+  services = [],
+  onSave,
+  isEditing = false,
+}) {
+  const fileInputRef = useRef(null);
 
-  const [imageUrl, setImageUrl] = useState(
-    initialService?.image?.src || ""
-  );
+  const [form, setForm] = useState(() => ({
+    id: initialService?.id ?? null,
+    title: initialService?.title || "",
+    slug: initialService?.slug || "",
+    description: initialService?.description || "",
+    status: initialService?.status || "draft",
+    order: initialService?.order ?? services.length + 1,
+    featured: initialService?.featured ?? false,
+    image: {
+      src: initialService?.image?.src || "",
+      alt: initialService?.image?.alt || "",
+    },
+    content: {
+      introduction: initialService?.content?.introduction || "",
+      sections: initialService?.content?.sections || [],
+    },
+    seo: {
+      title: initialService?.seo?.title || "",
+      description: initialService?.seo?.description || "",
+    },
+    createdAt: initialService?.createdAt || null,
+  }));
 
-  const [imageAlt, setImageAlt] = useState(
-    initialService?.image?.alt || ""
-  );
+  const [slugEdited, setSlugEdited] = useState(isEditing);
+  const [saving, setSaving] = useState(false);
+  const [imageError, setImageError] = useState("");
+  const [formError, setFormError] = useState("");
 
-  const [seoTitle, setSeoTitle] = useState(
-    initialService?.seo?.title || ""
-  );
-
-  const [seoDescription, setSeoDescription] = useState(
-    initialService?.seo?.description || ""
-  );
-
-  const [featured, setFeatured] = useState(
-    initialService?.featured || false
-  );
-
-  const [message, setMessage] = useState("");
-
-  const isEditing = Boolean(initialService);
-
-  function handleTitleChange(value) {
-    setTitle(value);
-
-    if (!isEditing || !slug) {
-      setSlug(createSlug(value));
-    }
+  function updateField(field, value) {
+    setForm((previous) => ({ ...previous, [field]: value }));
   }
 
-  function handleImageChange(event) {
+  function updateImage(field, value) {
+    setImageError("");
+    setForm((previous) => ({
+      ...previous,
+      image: { ...previous.image, [field]: value },
+    }));
+  }
+
+  function updateContent(field, value) {
+    setForm((previous) => ({
+      ...previous,
+      content: { ...previous.content, [field]: value },
+    }));
+  }
+
+  function updateSection(index, field, value) {
+    setForm((previous) => ({
+      ...previous,
+      content: {
+        ...previous.content,
+        sections: previous.content.sections.map((section, i) =>
+          i === index ? { ...section, [field]: value } : section
+        ),
+      },
+    }));
+  }
+
+  function addSection() {
+    updateContent("sections", [
+      ...form.content.sections,
+      { title: "", description: "" },
+    ]);
+  }
+
+  function removeSection(index) {
+    updateContent(
+      "sections",
+      form.content.sections.filter((_, i) => i !== index)
+    );
+  }
+
+  function handleFileChange(event) {
     const file = event.target.files?.[0];
 
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      setMessage("Please select a valid image.");
+      setImageError("Please select an image file.");
+      event.target.value = "";
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage("Please select an image smaller than 5 MB.");
+    if (file.size > 2 * 1024 * 1024) {
+      setImageError("Please select an image smaller than 2 MB.");
+      event.target.value = "";
       return;
     }
 
     const reader = new FileReader();
 
     reader.onload = () => {
-      setImageUrl(reader.result);
-      setMessage("");
+      updateImage("src", String(reader.result || ""));
+      setImageError("");
+    };
+
+    reader.onerror = () => {
+      setImageError("Unable to read this image. Please try again.");
     };
 
     reader.readAsDataURL(file);
   }
 
-  function updateSection(index, field, value) {
-    setSections((previous) =>
-      previous.map((section, currentIndex) =>
-        currentIndex === index
-          ? { ...section, [field]: value }
-          : section
-      )
-    );
-  }
-
-  function addSection() {
-    setSections((previous) => [
-      ...previous,
-      { heading: "", content: "" },
-    ]);
-  }
-
-  function removeSection(index) {
-    setSections((previous) =>
-      previous.filter((_, currentIndex) => currentIndex !== index)
-    );
-  }
-
-  function handleSubmit(event, nextStatus) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    setMessage("");
+    setFormError("");
 
-    if (!title.trim()) {
-      setMessage("Please enter a service title.");
+    const title = form.title.trim();
+    const slug = createSlug(form.slug || title);
+
+    if (!title || !slug) {
+      setFormError("Please enter a valid service title and URL slug.");
       return;
     }
 
-    if (!slug.trim()) {
-      setMessage("Please enter a service URL slug.");
+    if (!form.description.trim() || !form.content.introduction.trim()) {
+      setFormError("Please complete the service description and introduction.");
       return;
     }
 
-    if (!description.trim()) {
-      setMessage("Please enter a service description.");
+    if (
+      form.status === "published" &&
+      form.content.sections.some(
+        (section) =>
+          !section.title.trim() || !section.description.trim()
+      )
+    ) {
+      setFormError("Complete or remove every empty content section.");
       return;
     }
 
-    const serviceData = {
-      id: initialService?.id || Date.now(),
-      title,
-      slug,
-      description,
-      image: {
-        src: imageUrl,
-        alt: imageAlt,
-      },
-      featured,
-      status: nextStatus,
-      content: {
-        introduction,
-        sections: sections
-          .filter(
-            (section) =>
-              section.heading.trim() || section.content.trim()
-          )
-          .map((section) => ({
-            heading: section.heading,
-            paragraphs: section.content
-              .split("\n\n")
-              .map((paragraph) => paragraph.trim())
-              .filter(Boolean),
+    const duplicate = services.some(
+      (service) =>
+        service.slug === slug &&
+        String(service.id) !== String(form.id)
+    );
+
+    if (duplicate) {
+      setFormError("That URL slug is already used by another service.");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      await onSave({
+        ...form,
+        title,
+        slug,
+        description: form.description.trim(),
+        href: `/services/${slug}`,
+        order: Math.max(1, Number(form.order) || 1),
+        image: {
+          src: form.image.src.trim(),
+          alt: form.image.alt.trim(),
+        },
+        content: {
+          introduction: form.content.introduction.trim(),
+          sections: form.content.sections.map((section) => ({
+            title: section.title.trim(),
+            description: section.description.trim(),
           })),
-      },
-      seo: {
-        title: seoTitle,
-        description: seoDescription,
-      },
-    };
-
-    console.log(
-      isEditing ? "Demo service update:" : "Demo new service:",
-      serviceData
-    );
-
-    setMessage(
-      `Demo ${nextStatus} action completed. Changes are not saved permanently because the database is not connected.`
-    );
+        },
+        seo: {
+          title: form.seo.title.trim() || title,
+          description:
+            form.seo.description.trim() || form.description.trim(),
+        },
+      });
+    } catch (error) {
+      setFormError(
+        error?.message || "Unable to save the service. Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="min-h-screen bg-[#F9F9F9]">
-      <div className="mx-auto max-w-[1200px] p-4 sm:p-6 xl:p-8">
-        <div className="mb-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
           <Link
             href="/admin/services"
-            className="mb-4 inline-flex items-center gap-2 text-sm text-[#888888] transition hover:text-[#2852A0]"
+            className="inline-flex items-center gap-2 text-sm text-[#777777] hover:text-[#2852A0]"
           >
             <ArrowLeft size={16} />
             Back to Services
           </Link>
 
-          <h1 className="text-2xl font-bold text-[#081828] sm:text-3xl">
-            {isEditing ? "Edit Service" : "Add New Service"}
+          <h1 className="mt-3 text-2xl font-semibold text-[#081828]">
+            {isEditing ? "Edit Service" : "Create Service"}
           </h1>
 
           <p className="mt-1 text-sm text-[#888888]">
-            {isEditing
-              ? "Update your service information."
-              : "Add a new service to your website."}
+            Manage the service page content, image, and SEO.
           </p>
         </div>
 
-        <form
-          onSubmit={(event) => handleSubmit(event, "active")}
+        <button
+          type="submit"
+          disabled={saving}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#2852A0] px-5 text-sm font-medium text-white hover:bg-[#1F4386] disabled:opacity-60"
         >
-          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <section className="rounded-2xl border border-[#EEEEEE] bg-white p-5 sm:p-6">
-                <h2 className="text-lg font-semibold text-[#081828]">
-                  Basic Information
+          <Save size={16} />
+          {saving ? "Saving..." : "Save Service"}
+        </button>
+      </div>
+
+      {formError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          {formError}
+        </div>
+      )}
+
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-6">
+          <section className="rounded-xl border border-[#EEEEEE] bg-white p-5 sm:p-6">
+            <h2 className="text-base font-semibold text-[#081828]">
+              Service Information
+            </h2>
+
+            <div className="mt-5 space-y-5">
+              <div>
+                <label htmlFor="service-title" className={labelClass}>
+                  Service Title *
+                </label>
+                <input
+                  id="service-title"
+                  required
+                  maxLength={180}
+                  value={form.title}
+                  onChange={(event) => {
+                    const title = event.target.value;
+
+                    setForm((previous) => ({
+                      ...previous,
+                      title,
+                      slug: slugEdited
+                        ? previous.slug
+                        : createSlug(title),
+                      seo: {
+                        ...previous.seo,
+                        title:
+                          !previous.seo.title ||
+                          previous.seo.title === previous.title
+                            ? title
+                            : previous.seo.title,
+                      },
+                    }));
+                  }}
+                  className={inputClass}
+                  placeholder="Enter service title"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="service-slug" className={labelClass}>
+                  URL Slug *
+                </label>
+                <div className="mt-1.5 flex overflow-hidden rounded-lg border border-[#EEEEEE] focus-within:border-[#2852A0]">
+                  <span className="flex items-center bg-[#FAFAFA] px-3 text-xs text-[#888888]">
+                    /services/
+                  </span>
+                  <input
+                    id="service-slug"
+                    required
+                    value={form.slug}
+                    onChange={(event) => {
+                      setSlugEdited(true);
+                      updateField("slug", createSlug(event.target.value));
+                    }}
+                    className="h-11 min-w-0 flex-1 px-3 text-sm outline-none"
+                    placeholder="service-slug"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="service-description" className={labelClass}>
+                  Short Description *
+                </label>
+                <textarea
+                  id="service-description"
+                  required
+                  rows={3}
+                  maxLength={500}
+                  value={form.description}
+                  onChange={(event) =>
+                    updateField("description", event.target.value)
+                  }
+                  className={textareaClass}
+                  placeholder="Description displayed in service cards..."
+                />
+              </div>
+
+              <div>
+                <label htmlFor="service-introduction" className={labelClass}>
+                  Page Introduction *
+                </label>
+                <textarea
+                  id="service-introduction"
+                  required
+                  rows={5}
+                  value={form.content.introduction}
+                  onChange={(event) =>
+                    updateContent("introduction", event.target.value)
+                  }
+                  className={textareaClass}
+                  placeholder="Write the introduction for the service detail page..."
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-[#EEEEEE] bg-white p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-[#081828]">
+                  Content Sections
                 </h2>
+                <p className="mt-1 text-sm text-[#888888]">
+                  Add the headings and descriptions shown on the detail page.
+                </p>
+              </div>
 
-                <div className="mt-5 space-y-5">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-[#081828]">
-                      Service Title *
-                    </label>
-
-                    <input
-                      value={title}
-                      onChange={(event) =>
-                        handleTitleChange(event.target.value)
-                      }
-                      placeholder="Enter service title"
-                      className={inputClass}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-[#081828]">
-                      URL Slug *
-                    </label>
-
-                    <input
-                      value={slug}
-                      onChange={(event) =>
-                        setSlug(createSlug(event.target.value))
-                      }
-                      placeholder="service-url-slug"
-                      className={inputClass}
-                      required
-                    />
-
-                    <p className="mt-2 break-all text-xs text-[#888888]">
-                      /services/{slug || "service-url-slug"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-[#081828]">
-                      Short Description *
-                    </label>
-
-                    <textarea
-                      rows={4}
-                      value={description}
-                      onChange={(event) =>
-                        setDescription(event.target.value)
-                      }
-                      placeholder="Write a short service description..."
-                      className={`${inputClass} resize-y`}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-[#081828]">
-                      Introduction
-                    </label>
-
-                    <textarea
-                      rows={5}
-                      value={introduction}
-                      onChange={(event) =>
-                        setIntroduction(event.target.value)
-                      }
-                      placeholder="Write the service introduction..."
-                      className={`${inputClass} resize-y`}
-                    />
-                  </div>
-                </div>
-              </section>
-
-              {/* Content Sections */}
-              <section className="rounded-2xl border border-[#EEEEEE] bg-white p-5 sm:p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold text-[#081828]">
-                      Content Sections
-                    </h2>
-
-                    <p className="mt-1 text-sm text-[#888888]">
-                      Organize the detailed service content.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={addSection}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#EEEEEE] px-3 py-2.5 text-sm font-medium text-[#2852A0] transition hover:bg-[#F9F9F9]"
-                  >
-                    <Plus size={16} />
-                    Add Section
-                  </button>
-                </div>
-
-                <div className="mt-5 space-y-5">
-                  {sections.map((section, index) => (
-                    <div
-                      key={index}
-                      className="rounded-xl border border-[#EEEEEE] p-4"
-                    >
-                      <div className="mb-4 flex items-center justify-between gap-3">
-                        <h3 className="text-sm font-semibold text-[#081828]">
-                          Section {index + 1}
-                        </h3>
-
-                        {sections.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeSection(index)}
-                            aria-label={`Remove section ${index + 1}`}
-                            className="flex h-9 w-9 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50"
-                          >
-                            <Trash2 size={17} />
-                          </button>
-                        )}
-                      </div>
-
-                      <input
-                        value={section.heading}
-                        onChange={(event) =>
-                          updateSection(
-                            index,
-                            "heading",
-                            event.target.value
-                          )
-                        }
-                        placeholder="Section heading"
-                        className={inputClass}
-                      />
-
-                      <textarea
-                        rows={5}
-                        value={section.content}
-                        onChange={(event) =>
-                          updateSection(
-                            index,
-                            "content",
-                            event.target.value
-                          )
-                        }
-                        placeholder="Write section content. Separate paragraphs with a blank line."
-                        className={`${inputClass} mt-3 resize-y`}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* SEO */}
-              <section className="rounded-2xl border border-[#EEEEEE] bg-white p-5 sm:p-6">
-                <h2 className="text-lg font-semibold text-[#081828]">
-                  SEO Settings
-                </h2>
-
-                <div className="mt-5 space-y-5">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-[#081828]">
-                      SEO Title
-                    </label>
-
-                    <input
-                      value={seoTitle}
-                      maxLength={60}
-                      onChange={(event) =>
-                        setSeoTitle(event.target.value)
-                      }
-                      placeholder="Enter SEO title"
-                      className={inputClass}
-                    />
-
-                    <p className="mt-1 text-right text-xs text-[#888888]">
-                      {seoTitle.length}/60
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-[#081828]">
-                      Meta Description
-                    </label>
-
-                    <textarea
-                      rows={4}
-                      maxLength={160}
-                      value={seoDescription}
-                      onChange={(event) =>
-                        setSeoDescription(event.target.value)
-                      }
-                      placeholder="Write an SEO meta description..."
-                      className={`${inputClass} resize-y`}
-                    />
-
-                    <p className="mt-1 text-right text-xs text-[#888888]">
-                      {seoDescription.length}/160
-                    </p>
-                  </div>
-                </div>
-              </section>
+              <button
+                type="button"
+                onClick={addSection}
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-[#EEEEEE] px-3 text-sm font-medium text-[#2852A0] hover:bg-[#F4F6FA]"
+              >
+                <Plus size={15} />
+                Add Section
+              </button>
             </div>
 
-            {/* Sidebar */}
-            <aside className="space-y-6">
-              <section className="rounded-2xl border border-[#EEEEEE] bg-white p-5">
-                <h2 className="text-base font-semibold text-[#081828]">
-                  Save Service
-                </h2>
-
-                <div className="mt-5 space-y-3">
-                  <button
-                    type="button"
-                    onClick={(event) =>
-                      handleSubmit(event, "inactive")
-                    }
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#EEEEEE] px-4 py-3 text-sm font-semibold text-[#081828] transition hover:bg-[#F9F9F9]"
-                  >
-                    <Save size={17} />
-                    Save as Inactive
-                  </button>
-
-                  <button
-                    type="submit"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#2852A0] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1f4388]"
-                  >
-                    <Send size={17} />
-                    {isEditing ? "Update Service" : "Save Service"}
-                  </button>
-
-                  <Link
-                    href="/admin/services"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[#666666] transition hover:bg-[#F9F9F9]"
-                  >
-                    <X size={16} />
-                    Cancel
-                  </Link>
-                </div>
-
-                <p className="mt-4 rounded-lg bg-amber-50 p-3 text-xs leading-5 text-amber-800">
-                  Demo mode: Changes will not be saved permanently.
-                </p>
-              </section>
-
-              {/* Image */}
-              <section className="rounded-2xl border border-[#EEEEEE] bg-white p-5">
-                <h2 className="text-base font-semibold text-[#081828]">
-                  Service Image
-                </h2>
-
-                <label
-                  htmlFor="service-image"
-                  className="mt-4 flex min-h-40 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed border-[#D5D5D5] bg-[#F9F9F9] p-4 transition hover:border-[#2852A0]"
+            <div className="mt-5 space-y-4">
+              {form.content.sections.map((section, index) => (
+                <div
+                  key={index}
+                  className="rounded-lg border border-[#EEEEEE] p-4"
                 >
-                  {imageUrl ? (
-                    <img
-                      src={imageUrl}
-                      alt={imageAlt || "Service image preview"}
-                      className="max-h-56 w-full rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="text-center">
-                      <ImagePlus
-                        size={30}
-                        className="mx-auto text-[#888888]"
-                      />
+                  <div className="mb-4 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-[#081828]">
+                      Section {index + 1}
+                    </p>
 
-                      <p className="mt-3 text-sm font-medium text-[#081828]">
-                        Upload an image
-                      </p>
+                    <button
+                      type="button"
+                      onClick={() => removeSection(index)}
+                      aria-label={`Remove section ${index + 1}`}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[#888888] hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
 
-                      <p className="mt-1 text-xs text-[#888888]">
-                        Image only · Maximum 5 MB
-                      </p>
-                    </div>
-                  )}
-                </label>
-
-                <input
-                  id="service-image"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="sr-only"
-                />
-
-                {imageUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setImageUrl("")}
-                    className="mt-3 text-sm text-red-600 hover:text-red-700"
+                  <label
+                    htmlFor={`section-title-${index}`}
+                    className={labelClass}
                   >
-                    Remove Image
-                  </button>
-                )}
-
-                <label className="mb-2 mt-4 block text-sm font-medium text-[#081828]">
-                  Image Alt Text
-                </label>
-
-                <input
-                  value={imageAlt}
-                  onChange={(event) =>
-                    setImageAlt(event.target.value)
-                  }
-                  placeholder="Describe the image"
-                  className={inputClass}
-                />
-              </section>
-
-              {/* Featured */}
-              <section className="rounded-2xl border border-[#EEEEEE] bg-white p-5">
-                <label className="flex cursor-pointer items-start gap-3">
+                    Heading
+                  </label>
                   <input
-                    type="checkbox"
-                    checked={featured}
+                    id={`section-title-${index}`}
+                    value={section.title}
                     onChange={(event) =>
-                      setFeatured(event.target.checked)
+                      updateSection(index, "title", event.target.value)
                     }
-                    className="mt-1 h-4 w-4 accent-[#2852A0]"
+                    className={inputClass}
+                    placeholder="Section heading"
                   />
 
-                  <span>
-                    <span className="block text-sm font-medium text-[#081828]">
-                      Featured Service
-                    </span>
+                  <label
+                    htmlFor={`section-description-${index}`}
+                    className={`${labelClass} mt-4 block`}
+                  >
+                    Description
+                  </label>
+                  <textarea
+                    id={`section-description-${index}`}
+                    rows={4}
+                    value={section.description}
+                    onChange={(event) =>
+                      updateSection(
+                        index,
+                        "description",
+                        event.target.value
+                      )
+                    }
+                    className={textareaClass}
+                    placeholder="Write this section's content..."
+                  />
+                </div>
+              ))}
 
-                    <span className="mt-1 block text-xs leading-5 text-[#888888]">
-                      Highlight this service on your website.
-                    </span>
-                  </span>
-                </label>
-              </section>
-            </aside>
-          </div>
-
-          {message && (
-            <div
-              role="status"
-              className="mt-6 rounded-xl border border-[#EEEEEE] bg-white p-4 text-sm leading-6 text-[#2852A0]"
-            >
-              {message}
+              {form.content.sections.length === 0 && (
+                <p className="rounded-lg bg-[#FAFAFA] p-5 text-sm text-[#888888]">
+                  No content sections yet. Select Add Section to create one.
+                </p>
+              )}
             </div>
-          )}
-        </form>
+          </section>
+
+          <section className="rounded-xl border border-[#EEEEEE] bg-white p-5 sm:p-6">
+            <h2 className="text-base font-semibold text-[#081828]">
+              SEO Metadata
+            </h2>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label htmlFor="seo-title" className={labelClass}>
+                  SEO Title
+                </label>
+                <input
+                  id="seo-title"
+                  maxLength={70}
+                  value={form.seo.title}
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      seo: {
+                        ...previous.seo,
+                        title: event.target.value,
+                      },
+                    }))
+                  }
+                  className={inputClass}
+                  placeholder="Search engine title"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="seo-description" className={labelClass}>
+                  SEO Description
+                </label>
+                <textarea
+                  id="seo-description"
+                  rows={3}
+                  maxLength={170}
+                  value={form.seo.description}
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      seo: {
+                        ...previous.seo,
+                        description: event.target.value,
+                      },
+                    }))
+                  }
+                  className={textareaClass}
+                  placeholder="Search engine description"
+                />
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside className="space-y-6">
+          <section className="rounded-xl border border-[#EEEEEE] bg-white p-5">
+            <h2 className="text-base font-semibold text-[#081828]">
+              Publish Settings
+            </h2>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <label htmlFor="service-status" className={labelClass}>
+                  Status
+                </label>
+                <select
+                  id="service-status"
+                  value={form.status}
+                  onChange={(event) =>
+                    updateField("status", event.target.value)
+                  }
+                  className={inputClass}
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="service-order" className={labelClass}>
+                  Display Order
+                </label>
+                <input
+                  id="service-order"
+                  type="number"
+                  min="1"
+                  value={form.order}
+                  onChange={(event) =>
+                    updateField("order", event.target.value)
+                  }
+                  className={inputClass}
+                />
+              </div>
+
+              <label className="flex items-center gap-2 text-sm text-[#555555]">
+                <input
+                  type="checkbox"
+                  checked={form.featured}
+                  onChange={(event) =>
+                    updateField("featured", event.target.checked)
+                  }
+                  className="h-4 w-4 accent-[#2852A0]"
+                />
+                Featured service
+              </label>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-[#EEEEEE] bg-white p-5">
+            <h2 className="text-base font-semibold text-[#081828]">
+              Featured Image
+            </h2>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <label htmlFor="image-url" className={labelClass}>
+                  Image URL
+                </label>
+                <input
+                  id="image-url"
+                  type="url"
+                  value={
+                    form.image.src.startsWith("data:")
+                      ? ""
+                      : form.image.src
+                  }
+                  onChange={(event) =>
+                    updateImage("src", event.target.value)
+                  }
+                  className={inputClass}
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
+
+              <div className="relative flex items-center gap-3">
+                <div className="h-px flex-1 bg-[#EEEEEE]" />
+                <span className="text-xs text-[#999999]">OR UPLOAD</span>
+                <div className="h-px flex-1 bg-[#EEEEEE]" />
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex min-h-24 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[#CCCCCC] bg-[#FAFAFA] px-3 py-4 text-sm text-[#555555] transition hover:border-[#2852A0] hover:bg-[#F4F6FA]"
+              >
+                <ImagePlus size={22} className="text-[#2852A0]" />
+                <span className="font-medium">Choose image from device</span>
+                <span className="text-xs text-[#888888]">
+                  Image files up to 2 MB
+                </span>
+              </button>
+
+              {imageError && (
+                <p role="alert" className="text-sm text-red-600">
+                  {imageError}
+                </p>
+              )}
+
+              {form.image.src && (
+                <div className="overflow-hidden rounded-lg border border-[#EEEEEE]">
+                  <img
+                    src={form.image.src}
+                    alt={form.image.alt || ""}
+                    className="aspect-video w-full object-cover"
+                    onError={() =>
+                      setImageError("The image URL could not be loaded.")
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateImage("src", "");
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
+                    className="flex w-full items-center justify-center gap-2 border-t border-[#EEEEEE] px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 size={14} />
+                    Remove image
+                  </button>
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="image-alt" className={labelClass}>
+                  Image Alt Text
+                </label>
+                <input
+                  id="image-alt"
+                  value={form.image.alt}
+                  onChange={(event) =>
+                    updateImage("alt", event.target.value)
+                  }
+                  className={inputClass}
+                  placeholder="Describe the image"
+                />
+              </div>
+
+              <p className="text-xs leading-5 text-[#888888]">
+                Uploaded images are stored in browser storage in this
+                version. Use a URL or upload a small image for testing.
+              </p>
+            </div>
+          </section>
+        </aside>
       </div>
-    </div>
+
+      <div className="flex justify-end border-t border-[#EEEEEE] pt-4">
+        <button
+          type="submit"
+          disabled={saving}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#2852A0] px-5 text-sm font-medium text-white hover:bg-[#1F4386] disabled:opacity-60"
+        >
+          <Save size={16} />
+          {saving ? "Saving..." : "Save Service"}
+        </button>
+      </div>
+    </form>
   );
 }

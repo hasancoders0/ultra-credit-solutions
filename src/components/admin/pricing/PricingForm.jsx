@@ -77,7 +77,7 @@ export default function PricingForm({ initialPlan = null }) {
     }
 
     if (!isEditing || !href) {
-      setHref(`/get-started?plan=${createSlug(value)}`);
+      setHref(`/appointment`);
     }
 
     if (!isEditing || !buttonLabel) {
@@ -342,7 +342,7 @@ export default function PricingForm({ initialPlan = null }) {
                     setHref(event.target.value)
                   }
                   className={inputClass}
-                  placeholder="/get-started?plan=basic"
+                  placeholder="/appointment"
                 />
               </div>
             </div>

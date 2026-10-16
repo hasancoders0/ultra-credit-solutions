@@ -1,25 +1,39 @@
-import { notFound } from "next/navigation";
+"use client";
 
-import { locations } from "@/data/locations";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { toast } from "sonner";
+
 import LocationForm from "@/components/admin/locations/LocationForm";
+import { getAdminLocationById } from "@/lib/admin-locations";
 
-export const metadata = {
-  title: "Edit Location | Ultra Credit Solutions",
-  description: "Edit a location page.",
-};
+export default function EditLocationPage() {
+  const params = useParams();
+  const router = useRouter();
 
-export default async function EditLocationPage({ params }) {
-  const { id } = await params;
+  const [location, setLocation] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const location = locations.find(
-    (item) =>
-      String(item.id) === String(id) ||
-      item.slug === id
-  );
+  useEffect(() => {
+    const result = getAdminLocationById(params.id);
 
-  if (!location) {
-    notFound();
+    if (!result) {
+      toast.error("Location not found.");
+      router.replace("/admin/locations");
+      return;
+    }
+
+    setLocation(result);
+    setLoading(false);
+  }, [params.id, router]);
+
+  if (loading || !location) {
+    return (
+      <div className="rounded-xl border border-[#EEEEEE] bg-white p-8 text-sm text-[#888888]">
+        Loading location...
+      </div>
+    );
   }
 
-  return <LocationForm initialLocation={location} />;
+  return <LocationForm key={location.id} initialLocation={location} />;
 }

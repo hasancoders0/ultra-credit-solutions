@@ -14,7 +14,7 @@ The project has three main goals:
 1.  Present the company and its services clearly and professionally.
 2.  Build a strong technical foundation for SEO, local SEO, educational
     content, and paid-campaign landing pages.
-3.  Generate and manage qualified leads through website form
+3.  Generate and manage qualified appointments through website form
     submissions.
 
 The client prefers form submissions as the primary conversion action. Do
@@ -130,10 +130,10 @@ Recommended desktop navigation:
 Started**
 
 -   The logo links to `/`.
--   `Get Started` is a prominent button linking to `/get-started`.
+-   `Make an Appointment` is a prominent button linking to `/appointment`.
 -   Do not use a phone call as the primary CTA.
 -   The mobile menu must include the same destinations and a clearly
-    visible Get Started action.
+    visible Make an Appointment action.
 
 ### Footer navigation
 
@@ -161,7 +161,7 @@ Homepage section order:
 1.  **Hero**
     -   Clear, accurate company/service headline.
     -   Short supporting copy.
-    -   Primary CTA to `/get-started`.
+    -   Primary CTA to `/appointment`.
     -   Secondary link to Services.
 2.  **About Us**
     -   Short introduction and link to `/about`.
@@ -183,7 +183,7 @@ Homepage section order:
     -   Navigation, legal links, and verified contact details.
 
 A form does not have to be embedded on the homepage. The main CTA should
-send visitors to the dedicated Get Started page.
+send visitors to the dedicated Appointment page.
 
 ### 5.2 About Us --- `/about`
 
@@ -204,7 +204,7 @@ success claims.
 -   List available services.
 -   Explain each service in plain language.
 -   Provide clear links to individual service pages.
--   Include an appropriate Get Started CTA.
+-   Include an appropriate Make an Appointment CTA.
 -   Do not describe services the company does not actually provide.
 
 Recommended dynamic detail route:
@@ -218,7 +218,7 @@ publication.
 
 -   Show approved pricing plans and inclusions.
 -   Explain applicable fees and terms clearly.
--   Link each plan to `/get-started` if appropriate.
+-   Link each plan to `/appointment` if appropriate.
 -   Make pricing manageable through the admin dashboard.
 -   Do not publish pricing or payment claims before the client confirms
     them and obtains any required legal review.
@@ -248,7 +248,7 @@ launch.
 
 Do not make phone calls the primary conversion action.
 
-### 5.7 Get Started --- `/get-started`
+### 5.7 Make an Appointment --- `/appointment`
 
 This is the primary lead-generation page.
 
@@ -345,8 +345,8 @@ Create a protected admin area under `/admin`.
 
 Display useful operational summaries:
 
--   Total leads
--   New leads
+-   Total appointments
+-   New appointments
 -   Published blog posts
 -   Active services
 -   Published location pages
@@ -381,7 +381,7 @@ provide useful information from real data.
 -   Preview pages.
 -   Publish, unpublish, or archive locations.
 
-### 6.5 Lead management --- `/admin/leads`
+### 6.5 Lead management --- `/admin/appointments`
 
 -   View lead records.
 -   Search and filter by date/status.
@@ -472,7 +472,7 @@ ultra-credit-solutions/
 │   │   │   │   └── page.jsx
 │   │   │   ├── contact/
 │   │   │   │   └── page.jsx
-│   │   │   ├── get-started/
+│   │   │   ├── appointment/
 │   │   │   │   └── page.jsx
 │   │   │   ├── blog/
 │   │   │   │   ├── page.jsx
@@ -508,7 +508,7 @@ ultra-credit-solutions/
 │   │   │   │   │   └── page.jsx
 │   │   │   │   └── [id]/
 │   │   │   │       └── page.jsx
-│   │   │   ├── leads/
+│   │   │   ├── appointments/
 │   │   │   │   ├── page.jsx
 │   │   │   │   └── [id]/
 │   │   │   │       └── page.jsx
@@ -522,7 +522,7 @@ ultra-credit-solutions/
 │   │   │       └── page.jsx
 │   │   │
 │   │   ├── api/
-│   │   │   ├── leads/
+│   │   │   ├── appointments/
 │   │   │   │   └── route.js
 │   │   │   └── uploads/
 │   │   │       └── route.js
@@ -558,7 +558,7 @@ ultra-credit-solutions/
 │   │   ├── blog.js
 │   │   ├── services.js
 │   │   ├── locations.js
-│   │   └── leads.js
+│   │   └── appointments.js
 │   │
 │   └── middleware.js
 │
@@ -627,7 +627,7 @@ before migrations are created.
     creation date, post status, and slug.
 -   Use appropriate deletion behavior for related records.
 -   Avoid storing unnecessary sensitive data.
--   Establish a data retention and deletion policy for leads.
+-   Establish a data retention and deletion policy for appointments.
 -   Do not expose private lead data in public API responses.
 -   Use migrations to track database schema changes.
 
@@ -657,10 +657,10 @@ Measure:
 -   Website sessions and traffic sources.
 -   Organic search impressions and clicks.
 -   Landing-page performance.
--   Get Started button clicks.
+-   Make an Appointment button clicks.
 -   Successful form submissions.
 -   Lead sources and campaign UTM parameters where available.
--   Qualified leads and eventual customer outcomes when the client
+-   Qualified appointments and eventual customer outcomes when the client
     supplies those records.
 
 Do not count form-button clicks as successful submissions. Track
@@ -710,7 +710,7 @@ and advertising tools with appropriate privacy and consent controls.
 ### Phase 2 --- Public website
 
 -   Build header, footer, homepage, About, Services, Pricing, FAQ,
-    Contact, Get Started, Blog, Locations, and legal pages.
+    Contact, Make an Appointment, Blog, Locations, and legal pages.
 -   Implement responsive layouts and core accessibility.
 -   Add metadata and internal navigation.
 
@@ -747,7 +747,7 @@ and advertising tools with appropriate privacy and consent controls.
 -   Verify backups and migration procedures.
 -   Verify analytics and form delivery.
 -   Provide admin access securely.
--   Document how to publish content and manage leads.
+-   Document how to publish content and manage appointments.
 
 ## 14. Definition of Done
 
@@ -755,10 +755,10 @@ The first production release is ready when:
 
 -   All agreed public pages are implemented and responsive.
 -   Header, footer, and CTA navigation work correctly.
--   The Get Started form validates, submits securely, and stores the
+-   The Make an Appointment form validates, submits securely, and stores the
     lead.
 -   Authorized admins can manage blog posts, services, locations,
-    pricing, FAQs, testimonials, and leads.
+    pricing, FAQs, testimonials, and appointments.
 -   Public content is generated from the database where required.
 -   Draft and unpublished content is not publicly accessible.
 -   Metadata, sitemap, robots rules, and redirects are checked.
@@ -780,7 +780,7 @@ The first production release is ready when:
 4.  Confirm whether blog and location pages will be database-managed
     from day one.
 5.  Confirm image/file storage provider.
-6.  Confirm email notification provider for new leads.
+6.  Confirm email notification provider for new appointments.
 7.  Confirm Google Reviews integration approach.
 8.  Confirm analytics, consent, and campaign tracking requirements.
 9.  Confirm hosting and PostgreSQL provider.
@@ -794,7 +794,7 @@ The first production release is ready when:
 Build a polished, maintainable website and admin platform that helps
 Ultra Credit Solutions USA explain its services, publish useful
 educational content, strengthen its organic-search foundation, and
-collect and manage qualified leads through form submissions.
+collect and manage qualified appointments through form submissions.
 
 **Primary conversion goal:** successful, qualified lead form
 submissions---not phone calls or traffic volume alone.

@@ -31,8 +31,8 @@ export const homeFaqs = [
   },
   {
     id: 6,
-    question: "How do I get started with Ultra Credit Solutions?",
+    question: "How do I Make an Appointment with Ultra Credit Solutions?",
     answer:
-      "You can begin by visiting our Get Started page and submitting the requested information. Our team can then review your inquiry and explain the next steps. Any applicable service terms and fees should be explained before you agree to proceed.",
+      "You can begin by visiting our Make an Appointment page and submitting the requested information. Our team can then review your inquiry and explain the next steps. Any applicable service terms and fees should be explained before you agree to proceed.",
   },
 ];

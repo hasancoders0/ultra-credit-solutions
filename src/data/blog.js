@@ -24,7 +24,7 @@ const blogs = [
     publishedAt: "2026-10-01",
     updatedAt: "2026-10-01",
 
-    status: "published",
+    status: "draft",
     featured: true,
 
     seo: {

@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -7,11 +8,13 @@ import {
   FileText,
   BriefcaseBusiness,
   MapPin,
-  Users,
   CreditCard,
   Settings,
   ExternalLink,
   X,
+  CalendarCheck,
+  Mail,
+  Tags,
 } from "lucide-react";
 
 const menu = [
@@ -22,6 +25,21 @@ const menu = [
         name: "Dashboard",
         href: "/admin",
         icon: LayoutDashboard,
+      },
+    ],
+  },
+  {
+    label: "Business Management",
+    items: [
+      {
+        name: "Appointment Requests",
+        href: "/admin/appointments",
+        icon: CalendarCheck,
+      },
+      {
+        name: "Contacts",
+        href: "/admin/contacts",
+        icon: Mail,
       },
     ],
   },
@@ -48,15 +66,10 @@ const menu = [
         href: "/admin/pricing",
         icon: CreditCard,
       },
-    ],
-  },
-  {
-    label: "Business Management",
-    items: [
       {
-        name: "Leads",
-        href: "/admin/leads",
-        icon: Users,
+        name: "Categories",
+        href: "/admin/categories",
+        icon: Tags,
       },
     ],
   },
@@ -160,7 +173,6 @@ export default function Sidebar({ open = false, onClose }) {
                       }`}
                     >
                       <Icon size={19} strokeWidth={1.8} />
-
                       <span>{item.name}</span>
                     </Link>
                   );

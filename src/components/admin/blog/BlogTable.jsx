@@ -1,263 +1,237 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-
 import {
-  MoreHorizontal,
-  Pencil,
   Eye,
+  Pencil,
+  Trash2,
+  Globe,
+  FilePenLine,
+  CalendarClock,
+  Image as ImageIcon,
   Star,
-  CalendarDays,
-  FileText,
 } from "lucide-react";
 
-function StatusBadge({ status }) {
-  const isPublished = status === "published";
+const statusStyles = {
+  published: "bg-green-50 text-green-700",
+  draft: "bg-amber-50 text-amber-700",
+  scheduled: "bg-blue-50 text-[#2852A0]",
+};
 
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
-        isPublished
-          ? "bg-emerald-50 text-emerald-700"
-          : "bg-amber-50 text-amber-700"
-      }`}
-    >
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${
-          isPublished
-            ? "bg-emerald-500"
-            : "bg-amber-500"
-        }`}
-      />
+function formatDate(value) {
+  if (!value) return "—";
 
-      {isPublished ? "Published" : "Draft"}
-    </span>
-  );
-}
+  const date = new Date(value);
 
-function formatDate(date) {
-  if (!date) return "Not available";
+  if (Number.isNaN(date.getTime())) return "—";
 
-  const parsedDate = new Date(date);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return "Not available";
-  }
-
-  return parsedDate.toLocaleDateString("en-US", {
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
-  });
+  }).format(date);
 }
 
-function PostActions({ blog }) {
-  const [open, setOpen] = useState(false);
-
+export default function BlogTable({ posts, onTogglePublish, onDelete }) {
   return (
-    <div className="relative flex justify-end">
-      <button
-        type="button"
-        onClick={() => setOpen((previous) => !previous)}
-        aria-label={`Actions for ${blog.title}`}
-        aria-expanded={open}
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-[#888888] transition hover:bg-[#F9F9F9] hover:text-[#081828]"
-      >
-        <MoreHorizontal size={20} />
-      </button>
+    <div className="w-full overflow-x-auto">
+      <table className="w-full min-w-[950px] border-collapse text-left">
+        <thead>
+          <tr className="border-b border-[#EEEEEE] bg-[#FAFAFA]">
+            {["POST", "CATEGORY", "AUTHOR", "UPDATED", "STATUS"].map(
+              (heading) => (
+                <th
+                  key={heading}
+                  className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-[#888888]"
+                >
+                  {heading}
+                </th>
+              ),
+            )}
 
-      {open && (
-        <>
-          <button
-            type="button"
-            aria-label="Close actions menu"
-            className="fixed inset-0 z-10 cursor-default"
-            onClick={() => setOpen(false)}
-          />
+            <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-[#888888]">
+              ACTIONS
+            </th>
+          </tr>
+        </thead>
 
-          <div className="absolute right-0 top-10 z-20 w-44 rounded-xl border border-[#EEEEEE] bg-white p-1.5 shadow-xl">
-            <Link
-              href={`/admin/blog/${blog.id}`}
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-[#666666] transition hover:bg-[#F9F9F9] hover:text-[#2852A0]"
-            >
-              <Pencil size={16} />
-              Edit Article
-            </Link>
+        <tbody className="divide-y divide-[#EEEEEE]">
+          {posts.length > 0 ? (
+            posts.map((post) => {
+              const postStatus = post.status?.toLowerCase();
+              const isPublished = postStatus === "published";
+              const isDraft = postStatus === "draft";
+              const isScheduled = postStatus === "scheduled";
+              const canView = isPublished;
 
-            <Link
-              href={`/blog/${blog.slug}`}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-[#666666] transition hover:bg-[#F9F9F9] hover:text-[#2852A0]"
-            >
-              <Eye size={16} />
-              Preview Article
-            </Link>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+              return (
+                <tr key={post.id} className="transition hover:bg-[#FAFBFD]">
+                  {/* Post details */}
+                  <td className="max-w-[400px] px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="relative flex h-[58px] w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#EEEEEE] bg-[#F4F6FA]">
+                        {post.featuredImage?.src ? (
+                          <img
+                            src={post.featuredImage.src}
+                            alt={post.featuredImage.alt || post.title}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <ImageIcon size={21} className="text-[#A0A8B5]" />
+                        )}
 
-export default function BlogTable({ blogs }) {
-  if (!blogs.length) {
-    return (
-      <div className="rounded-2xl border border-[#EEEEEE] bg-white px-5 py-16 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#2852A0]/10 text-[#2852A0]">
-          <FileText size={25} />
-        </div>
+                        {post.featured && (
+                          <span className="absolute right-1 top-1 rounded bg-white/95 p-1 text-amber-500 shadow-sm">
+                            <Star size={11} fill="currentColor" />
+                          </span>
+                        )}
+                      </div>
 
-        <h3 className="mt-4 text-lg font-semibold text-[#081828]">
-          No articles found
-        </h3>
+                      <div className="min-w-0">
+                        <p className="line-clamp-2 text-sm font-semibold leading-5 text-[#081828]">
+                          {post.title}
+                        </p>
 
-        <p className="mt-2 text-sm text-[#888888]">
-          Try changing your search or filters.
-        </p>
-      </div>
-    );
-  }
+                        <p className="mt-1 truncate text-xs text-[#888888]">
+                          /{post.slug}
+                        </p>
 
-  return (
-    <div className="overflow-hidden rounded-2xl border border-[#EEEEEE] bg-white">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[850px] border-collapse text-left">
-          <thead>
-            <tr className="border-b border-[#EEEEEE] bg-[#F9F9F9]">
-              <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-[#888888]">
-                Article
-              </th>
-
-              <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-[#888888]">
-                Category
-              </th>
-
-              <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-[#888888]">
-                Status
-              </th>
-
-              <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-[#888888]">
-                Last Updated
-              </th>
-
-              <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-[#888888]">
-                Featured
-              </th>
-
-              <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wider text-[#888888]">
-                Actions
-              </th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-[#EEEEEE]">
-            {blogs.map((blog) => (
-              <tr
-                key={blog.id}
-                className="transition hover:bg-[#F9F9F9]/70"
-              >
-                {/* Article */}
-                <td className="px-5 py-4">
-                  <div className="flex min-w-[280px] items-center gap-3">
-                    <div className="h-[58px] w-[76px] shrink-0 overflow-hidden rounded-lg bg-[#F9F9F9]">
-                      {blog.featuredImage?.src ? (
-                        <img
-                          src={blog.featuredImage.src}
-                          alt={
-                            blog.featuredImage.alt ||
-                            blog.title
-                          }
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-[#888888]">
-                          <FileText size={22} />
-                        </div>
-                      )}
+                        <p className="mt-1 line-clamp-1 text-xs text-[#999999]">
+                          {post.excerpt}
+                        </p>
+                      </div>
                     </div>
+                  </td>
 
-                    <div className="min-w-0">
+                  {/* Category */}
+                  <td className="px-5 py-4">
+                    <span className="inline-flex rounded-md bg-[#F4F6FA] px-2.5 py-1 text-xs font-medium text-[#555F70]">
+                      {post.category || "Uncategorized"}
+                    </span>
+                  </td>
+
+                  {/* Author */}
+                  <td className="whitespace-nowrap px-5 py-4 text-sm text-[#555555]">
+                    {post.author || "Admin"}
+                  </td>
+
+                  {/* Updated date */}
+                  <td className="whitespace-nowrap px-5 py-4 text-sm text-[#666666]">
+                    {formatDate(post.updatedAt || post.publishedAt)}
+                  </td>
+
+                  {/* Status */}
+                  <td className="px-5 py-4">
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                        statusStyles[postStatus] || "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                      {postStatus || "unknown"}
+                    </span>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-5 py-4">
+                    <div className="flex items-center justify-end gap-1">
+                      {/* View published post only */}
+                      {canView ? (
+                        <Link
+                          href={`/blog/${post.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="View published post"
+                          aria-label={`View ${post.title}`}
+                          className="flex h-9 w-9 items-center justify-center rounded-lg text-[#777777] transition hover:bg-blue-50 hover:text-[#2852A0]"
+                        >
+                          <Eye size={16} />
+                        </Link>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          title={
+                            isDraft
+                              ? "Publish this draft to view it publicly"
+                              : isScheduled
+                                ? "This post is scheduled and not yet available publicly"
+                                : "Only published posts can be viewed publicly"
+                          }
+                          aria-label={`View unavailable for ${post.title}`}
+                          className="flex h-9 w-9 cursor-not-allowed items-center justify-center rounded-lg text-gray-300 opacity-60"
+                        >
+                          <Eye size={16} />
+                        </button>
+                      )}
+
+                      {/* Edit */}
                       <Link
-                        href={`/admin/blog/${blog.id}`}
-                        className="line-clamp-2 text-sm font-semibold text-[#081828] transition hover:text-[#2852A0]"
+                        href={`/admin/blog/${post.id}`}
+                        title="Edit post"
+                        aria-label={`Edit ${post.title}`}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-[#777777] transition hover:bg-blue-50 hover:text-[#2852A0]"
                       >
-                        {blog.title}
+                        <Pencil size={16} />
                       </Link>
 
-                      <p className="mt-1 text-xs text-[#888888]">
-                        By {blog.author || "Administrator"}
-                      </p>
+                      {/* Publish / Unpublish */}
+                      <button
+                        type="button"
+                        onClick={() => onTogglePublish(post)}
+                        title={
+                          isPublished
+                            ? "Unpublish post"
+                            : isScheduled
+                              ? "Publish post"
+                              : "Publish post"
+                        }
+                        aria-label={`Change status of ${post.title}`}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-[#777777] transition hover:bg-green-50 hover:text-green-700"
+                      >
+                        {isPublished ? (
+                          <FilePenLine size={16} />
+                        ) : isScheduled ? (
+                          <CalendarClock size={16} />
+                        ) : (
+                          <Globe size={16} />
+                        )}
+                      </button>
+
+                      {/* Delete */}
+                      <button
+                        type="button"
+                        onClick={() => onDelete(post)}
+                        title="Delete post"
+                        aria-label={`Delete ${post.title}`}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-[#777777] transition hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
-                  </div>
-                </td>
+                  </td>
+                </tr>
+              );
+            })
+          ) : (
+            <tr>
+              <td colSpan={6} className="px-5 py-16 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
+                  <FilePenLine size={22} className="text-[#888888]" />
+                </div>
 
-                {/* Category */}
-                <td className="px-5 py-4">
-                  <span className="rounded-lg bg-[#F9F9F9] px-3 py-1.5 text-xs font-medium text-[#666666]">
-                    {blog.category || "Uncategorized"}
-                  </span>
-                </td>
+                <p className="mt-3 text-sm font-semibold text-[#081828]">
+                  No blog posts found
+                </p>
 
-                {/* Status */}
-                <td className="px-5 py-4">
-                  <StatusBadge status={blog.status} />
-                </td>
-
-                {/* Updated Date */}
-                <td className="px-5 py-4">
-                  <div className="flex items-center gap-2 whitespace-nowrap text-sm text-[#666666]">
-                    <CalendarDays
-                      size={15}
-                      className="text-[#888888]"
-                    />
-
-                    {formatDate(
-                      blog.updatedAt || blog.publishedAt
-                    )}
-                  </div>
-                </td>
-
-                {/* Featured */}
-                <td className="px-5 py-4">
-                  {blog.featured ? (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600">
-                      <Star
-                        size={15}
-                        fill="currentColor"
-                      />
-                      Featured
-                    </span>
-                  ) : (
-                    <span className="text-xs text-[#888888]">
-                      Standard
-                    </span>
-                  )}
-                </td>
-
-                {/* Actions */}
-                <td className="px-5 py-4">
-                  <PostActions blog={blog} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="flex flex-col gap-2 border-t border-[#EEEEEE] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-[#888888]">
-          Showing {blogs.length}{" "}
-          {blogs.length === 1 ? "article" : "articles"}
-        </p>
-
-        <p className="text-xs text-[#999999]">
-          Demo data · Database not connected
-        </p>
-      </div>
+                <p className="mt-1 text-sm text-[#888888]">
+                  Try another search or create a new post.
+                </p>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }

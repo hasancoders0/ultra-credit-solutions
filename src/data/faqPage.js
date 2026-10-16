@@ -240,10 +240,10 @@ export const faqPageCategories = [
       "Find out how to contact Ultra Credit Solutions and learn about the next steps.",
     faqs: [
       {
-        id: "how-to-get-started-ultra-credit",
-        question: "How do I get started with Ultra Credit Solutions?",
+        id: "how-to-appointment-ultra-credit",
+        question: "How do I Make an Appointment with Ultra Credit Solutions?",
         answer:
-          "Visit our Get Started page and submit the requested information. Our team can review your inquiry and explain the next steps, including relevant service details and applicable fees. Submitting an inquiry does not itself establish a service agreement.",
+          "Visit our Appointment page and submit the requested information. Our team can review your inquiry and explain the next steps, including relevant service details and applicable fees. Submitting an inquiry does not itself establish a service agreement.",
       },
       {
         id: "how-to-contact-ultra-credit",

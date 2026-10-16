@@ -11,7 +11,7 @@ import AppointmentForm from "@/components/forms/AppointmentForm";
 export default function LeadForm() {
   return (
     <section
-      id="get-started-form"
+      id="appointment-form"
       className="scroll-mt-24 px-5 py-16 sm:py-20 lg:py-24"
     >
       <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">

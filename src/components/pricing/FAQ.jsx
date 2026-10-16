@@ -23,9 +23,9 @@ const questions = [
       "The plans have different monthly prices and listed features. The Gold Plan includes free setup and states that it includes the Basic Plan features. Review the comparison above for more details.",
   },
   {
-    question: "How can I get started?",
+    question: "How can I Make an Appointment?",
     answer:
-      "Choose your preferred plan and select its button to open the Get Started form. You can submit your contact information and describe your credit-related concerns.",
+      "Choose your preferred plan and select its button to open the Make an Appointment form. You can submit your contact information and describe your credit-related concerns.",
   },
   {
     question: "Does credit repair guarantee a specific credit score?",

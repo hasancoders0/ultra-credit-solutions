@@ -17,10 +17,10 @@ export default function LocationCTA() {
         </div>
 
         <Link
-          href="/get-started"
+          href="/appointment"
           className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#FF6B81] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#f25570]"
         >
-          Get Started
+          Make an Appointment
           <ArrowRight size={17} />
         </Link>
       </div>

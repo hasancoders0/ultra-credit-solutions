@@ -1,0 +1,67 @@
+export const mockAppointments = [
+  {
+    id: "appointment-001",
+    fullName: "Emily Johnson",
+    email: "emily.johnson@example.com",
+    service: "Credit Repair Services",
+    concerns:
+      "I have some inaccurate information on my credit report and would like to understand how your services can help me.",
+    submittedAt: "2026-10-15T09:30:00",
+    status: "New",
+    adminNotes: "",
+    contactedAt: null,
+    scheduledAt: null,
+  },
+  {
+    id: "appointment-002",
+    fullName: "Daniel Williams",
+    email: "daniel.williams@example.com",
+    service: "Credit Report Review",
+    concerns:
+      "I would like someone to review my credit report and explain which items may need attention.",
+    submittedAt: "2026-10-14T14:20:00",
+    status: "Reviewed",
+    adminNotes: "Review the inquiry about credit report items.",
+    contactedAt: null,
+    scheduledAt: null,
+  },
+  {
+    id: "appointment-003",
+    fullName: "Sophia Martinez",
+    email: "sophia.martinez@example.com",
+    service: "Credit Building Guidance",
+    concerns:
+      "I want to build a stronger credit history and learn which steps I should consider taking.",
+    submittedAt: "2026-10-14T11:15:00",
+    status: "Contacted",
+    adminNotes: "Initial contact made. Follow up if needed.",
+    contactedAt: "2026-10-14T15:00:00",
+    scheduledAt: null,
+  },
+  {
+    id: "appointment-004",
+    fullName: "James Anderson",
+    email: "james.anderson@example.com",
+    service: "Credit Score Information",
+    concerns:
+      "I would like to understand the factors affecting my credit score and how I can improve my credit profile.",
+    submittedAt: "2026-10-13T10:45:00",
+    status: "New",
+    adminNotes: "",
+    contactedAt: null,
+    scheduledAt: null,
+  },
+  {
+    id: "appointment-005",
+    fullName: "Olivia Davis",
+    email: "olivia.davis@example.com",
+    service: "Other",
+    concerns:
+      "I have a few questions about your services and would like to speak with someone who can guide me.",
+    submittedAt: "2026-10-12T16:10:00",
+    status: "Closed",
+    adminNotes: "Demo record marked closed.",
+    contactedAt: null,
+    scheduledAt: null,
+  },
+];

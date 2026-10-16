@@ -19,10 +19,10 @@ export default function SingleCTA() {
         </p>
 
         <Link
-          href="/get-started"
+          href="/appointment"
           className="mt-8 inline-flex items-center gap-2 rounded-lg bg-[#FF6B81] px-7 py-4 font-semibold text-white transition hover:bg-[#f45570]"
         >
-          Get Started Today
+          Make an Appointment Today
           <ArrowRight size={18} />
         </Link>
       </div>

@@ -82,10 +82,10 @@ export default function SingleContent({ service }) {
             </p>
 
             <Link
-              href="/get-started"
+              href="/appointment"
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-[#2852A0] px-5 py-3.5 !text-white font-semibold transition hover:bg-[#1e417f]"
             >
-              Get Started
+              Make an Appointment
               <ArrowUpRight size={18} className="text-white" />
             </Link>
 

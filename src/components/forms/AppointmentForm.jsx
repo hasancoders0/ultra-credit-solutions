@@ -75,7 +75,7 @@ export default function AppointmentForm() {
             <span className="h-2 w-2 rounded-full bg-[#FF6B81]" />
 
             <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#2852A0]">
-              Get Started
+              Make an Appointment
             </span>
           </div>
 
