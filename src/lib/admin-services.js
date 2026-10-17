@@ -1,131 +1,100 @@
 
 import { services as initialServices } from "@/data/services";
 
-export const SERVICE_STORAGE_KEY = "ucs-admin-services";
+export const SERVICE_STORAGE_KEY = null;
 export const SERVICE_UPDATED_EVENT = "ucs-services-updated";
 
-function normalizeService(service, index = 0) {
-  const image =
-    typeof service.image === "string"
-      ? { src: service.image, alt: service.imageAlt || "" }
-      : {
-          src: service.image?.src || "",
-          alt: service.image?.alt || service.imageAlt || "",
-        };
+let servicesStore = initialServices.map((service) => ({
+  ...service,
+  category: service.category || "",
+  image: { ...(service.image || {}) },
+  content: {
+    ...(service.content || {}),
+    sections: (service.content?.sections || []).map((section) => ({
+      ...section,
+    })),
+  },
+  seo: { ...(service.seo || {}) },
+}));
 
+function cloneService(service) {
   return {
     ...service,
-    id: service.id ?? index + 1,
-    title: service.title || "",
-    slug: service.slug || "",
-    description: service.description || "",
-    href: service.href || `/services/${service.slug || ""}`,
-    number: service.number || String(index + 1).padStart(2, "0"),
-    featured: service.featured ?? false,
-    image,
+    image: { ...(service.image || {}) },
     content: {
-      introduction: service.content?.introduction || "",
-      sections: Array.isArray(service.content?.sections)
-        ? service.content.sections
-        : [],
+      ...(service.content || {}),
+      sections: (service.content?.sections || []).map((section) => ({
+        ...section,
+      })),
     },
-    status: service.status || "published",
-    order: Number(service.order ?? service.number ?? index + 1) || index + 1,
-    seo: {
-      title: service.seo?.title || service.title || "",
-      description:
-        service.seo?.description || service.description || "",
-    },
-    createdAt: service.createdAt || null,
-    updatedAt: service.updatedAt || null,
+    seo: { ...(service.seo || {}) },
   };
 }
 
-export function getAdminServices() {
-  if (typeof window === "undefined") {
-    return initialServices.map(normalizeService);
+function notifyServicesUpdated() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(SERVICE_UPDATED_EVENT));
   }
-
-  try {
-    const saved = localStorage.getItem(SERVICE_STORAGE_KEY);
-
-    if (saved !== null) {
-      const parsed = JSON.parse(saved);
-
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map(normalizeService);
-      }
-
-      // An empty old storage value should not hide the initial services.
-      return initialServices.map(normalizeService);
-    }
-  } catch (error) {
-    console.error("Unable to load services:", error);
-  }
-
-  return initialServices.map(normalizeService);
 }
 
-export function saveAdminServices(services) {
-  if (typeof window === "undefined") {
-    throw new Error("Services can only be saved in the browser.");
-  }
-
-  localStorage.setItem(
-    SERVICE_STORAGE_KEY,
-    JSON.stringify(services.map(normalizeService))
-  );
-
-  window.dispatchEvent(new Event(SERVICE_UPDATED_EVENT));
+export function getAdminServices() {
+  return servicesStore.map(cloneService);
 }
 
 export function getAdminServiceById(id) {
-  return getAdminServices().find(
-    (service) => String(service.id) === String(id)
-  ) || null;
+  const service = servicesStore.find(
+    (item) => String(item.id) === String(id)
+  );
+
+  return service ? cloneService(service) : null;
 }
 
-export function saveAdminService(serviceData) {
-  const services = getAdminServices();
-  const now = new Date().toISOString();
+export function saveAdminServices(nextServices) {
+  if (!Array.isArray(nextServices)) {
+    throw new Error("Services must be provided as an array.");
+  }
 
-  const existing = services.find(
-    (service) => String(service.id) === String(serviceData.id)
+  servicesStore = nextServices.map(cloneService);
+  notifyServicesUpdated();
+
+  return getAdminServices();
+}
+
+export function saveAdminService(serviceToSave) {
+  if (!serviceToSave || serviceToSave.id == null) {
+    throw new Error("A valid service with an ID is required.");
+  }
+
+  const index = servicesStore.findIndex(
+    (service) => String(service.id) === String(serviceToSave.id)
   );
 
-  const id =
-    existing?.id ??
-    Math.max(0, ...services.map((service) => Number(service.id) || 0)) + 1;
+  if (index === -1) {
+    servicesStore = [...servicesStore, cloneService(serviceToSave)];
+  } else {
+    servicesStore = servicesStore.map((service, i) =>
+      i === index ? cloneService(serviceToSave) : service
+    );
+  }
 
-  const service = normalizeService(
-    {
-      ...existing,
-      ...serviceData,
-      id,
-      href: `/services/${serviceData.slug}`,
-      createdAt: existing?.createdAt || serviceData.createdAt || now,
-      updatedAt: now,
-    },
-    services.length
-  );
+  notifyServicesUpdated();
 
-  const nextServices = existing
-    ? services.map((item) =>
-        String(item.id) === String(id) ? service : item
-      )
-    : [...services, service];
-
-  saveAdminServices(nextServices);
-
-  return service;
+  return getAdminServiceById(serviceToSave.id);
 }
 
 export function deleteAdminService(id) {
-  const nextServices = getAdminServices().filter(
+  servicesStore = servicesStore.filter(
     (service) => String(service.id) !== String(id)
   );
 
-  saveAdminServices(nextServices);
+  notifyServicesUpdated();
 
-  return nextServices;
+  return getAdminServices();
+}
+
+export function resetAdminServices() {
+  servicesStore = initialServices.map(cloneService);
+  notifyServicesUpdated();
+
+  return getAdminServices();
 }

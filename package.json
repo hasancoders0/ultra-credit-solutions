@@ -6,7 +6,8 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:init": "node --env-file=.env.local scripts/init-db.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -22,10 +23,13 @@
     "@tiptap/pm": "^3.32.0",
     "@tiptap/react": "^3.32.0",
     "@tiptap/starter-kit": "^3.32.0",
+    "bcryptjs": "^3.0.3",
     "framer-motion": "^14.1.0",
-    "isomorphic-dompurify": "^4.5.0",
+    "isomorphic-dompurify": "^4.6.0",
     "lucide-react": "^1.55.0",
+    "mongodb": "^7.7.0",
     "next": "16.4.0",
+    "nodemailer": "^10.1.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-hook-form": "^7.89.0",
@@ -35,6 +39,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/turbopack": "^4",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",

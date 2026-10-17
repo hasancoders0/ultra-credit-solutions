@@ -1,6 +1,7 @@
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -14,6 +15,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata = {
+  metadataBase: new URL("https://YOUR-DOMAIN.com"),
   title: {
     default: "Ultra Credit Solutions USA",
     template: "%s | Ultra Credit Solutions USA",
@@ -24,10 +26,19 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${inter.variable} ${plusJakartaSans.variable}`}>
+    <html
+      lang="en"
+      className={`${inter.variable} ${plusJakartaSans.variable}`}
+    >
       <body className="min-h-screen flex flex-col font-sans antialiased">
         {children}
-        <Toaster position="top-right" richColors closeButton duration={4000} />
+
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          duration={4000}
+        />
       </body>
     </html>
   );

@@ -1,28 +1,73 @@
-import { MapPin, Globe, FileText } from "lucide-react";
 
-export default function LocationStats({ stats }) {
-  const cards = [
-    { label: "Total Locations", value: stats.total, Icon: MapPin },
-    { label: "Published", value: stats.published, Icon: Globe },
-    { label: "Drafts", value: stats.draft, Icon: FileText },
-  ];
+"use client";
 
+import {
+  MapPin,
+  Globe,
+  FilePenLine,
+  Star,
+} from "lucide-react";
+
+const statItems = [
+  {
+    key: "total",
+    label: "Total Locations",
+    icon: MapPin,
+    iconColor: "text-[#2852A0]",
+    iconBg: "bg-blue-50",
+  },
+  {
+    key: "published",
+    label: "Published",
+    icon: Globe,
+    iconColor: "text-green-700",
+    iconBg: "bg-green-50",
+  },
+  {
+    key: "drafts",
+    label: "Drafts",
+    icon: FilePenLine,
+    iconColor: "text-[#FF6B81]",
+    iconBg: "bg-pink-50",
+  },
+  {
+    key: "featured",
+    label: "Featured Locations",
+    icon: Star,
+    iconColor: "text-amber-600",
+    iconBg: "bg-amber-50",
+  },
+];
+
+export default function LocationStats({ stats = {} }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {cards.map(({ label, value, Icon }) => (
-        <div
-          key={label}
-          className="rounded-xl border border-[#EEEEEE] bg-white p-5"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-[#888888]">{label}</p>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EFF4FF] text-[#2852A0]">
-              <Icon size={19} />
-            </span>
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      {statItems.map((item) => {
+        const Icon = item.icon;
+
+        return (
+          <div
+            key={item.key}
+            className="flex min-h-[78px] items-center justify-between gap-3 rounded-xl border border-[#EEEEEE] bg-white px-4 py-3"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-xs font-medium text-[#888888] sm:text-sm">
+                {item.label}
+              </p>
+
+              <p className="mt-1 text-xl font-semibold text-[#081828]">
+                {stats[item.key] ?? 0}
+              </p>
+            </div>
+
+            <div
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${item.iconBg}`}
+            >
+              <Icon size={18} className={item.iconColor} />
+            </div>
           </div>
-          <p className="mt-3 text-2xl font-semibold text-[#081828]">{value}</p>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

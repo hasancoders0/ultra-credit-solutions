@@ -1,11 +1,10 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FileText,
   BriefcaseBusiness,
-  MapPin,
   Search,
   Plus,
   Pencil,
@@ -16,28 +15,15 @@ import {
   Tags,
   AlertCircle,
   SlidersHorizontal,
+  LoaderCircle,
+  RefreshCw,
 } from "lucide-react";
 
-import initialCategories from "@/data/categories";
-
-const STORAGE_KEY = "ucs-admin-categories";
+const API_URL = "/api/admin/categories";
 
 const categoryTypes = [
-  {
-    key: "blog",
-    label: "Blog",
-    icon: FileText,
-  },
-  {
-    key: "services",
-    label: "Services",
-    icon: BriefcaseBusiness,
-  },
-  {
-    key: "locations",
-    label: "Locations",
-    icon: MapPin,
-  },
+  { key: "blog", label: "Blog", icon: FileText },
+  { key: "services", label: "Services", icon: BriefcaseBusiness },
 ];
 
 function createSlug(value = "") {
@@ -46,7 +32,8 @@ function createSlug(value = "") {
     .trim()
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function emptyForm() {
@@ -58,18 +45,49 @@ function emptyForm() {
   };
 }
 
-function normalizeCategories(data) {
-  return {
-    blog: Array.isArray(data?.blog) ? data.blog : [],
-    services: Array.isArray(data?.services) ? data.services : [],
-    locations: Array.isArray(data?.locations) ? data.locations : [],
-  };
+function normalizeCategories(items) {
+  const result = { blog: [], services: [] };
+
+  if (!Array.isArray(items)) return result;
+
+  for (const category of items) {
+    const type = category.type;
+
+    if (type !== "blog" && type !== "services") continue;
+
+    result[type].push({
+      ...category,
+      id: String(category.id || category._id),
+    });
+  }
+
+  return result;
+}
+
+async function requestApi(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...options.headers,
+    },
+    cache: "no-store",
+  });
+
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Something went wrong. Please try again.");
+  }
+
+  return result;
 }
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState(() =>
-    normalizeCategories(initialCategories)
-  );
+  const [categories, setCategories] = useState({
+    blog: [],
+    services: [],
+  });
 
   const [activeType, setActiveType] = useState("blog");
   const [search, setSearch] = useState("");
@@ -82,33 +100,30 @@ export default function CategoriesPage() {
   const [formError, setFormError] = useState("");
 
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [storageReady, setStorageReady] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [busyId, setBusyId] = useState(null);
+  const [pageError, setPageError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  // Load categories from localStorage.
-  useEffect(() => {
+  const loadCategories = useCallback(async () => {
+    setLoading(true);
+    setPageError("");
+
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-
-      if (saved) {
-        setCategories(normalizeCategories(JSON.parse(saved)));
-      }
+      const result = await requestApi(API_URL);
+      setCategories(normalizeCategories(result.categories));
     } catch (error) {
-      console.error("Unable to load categories:", error);
+      setPageError(error.message || "Unable to load categories.");
     } finally {
-      setStorageReady(true);
+      setLoading(false);
     }
   }, []);
 
-  // Save category changes.
   useEffect(() => {
-    if (!storageReady) return;
-
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
-    } catch (error) {
-      console.error("Unable to save categories:", error);
-    }
-  }, [categories, storageReady]);
+    loadCategories();
+  }, [loadCategories]);
 
   const currentType = categoryTypes.find(
     (type) => type.key === activeType
@@ -122,8 +137,8 @@ export default function CategoriesPage() {
     return currentCategories.filter((category) => {
       const matchesSearch =
         !query ||
-        category.name.toLowerCase().includes(query) ||
-        category.slug.toLowerCase().includes(query) ||
+        (category.name || "").toLowerCase().includes(query) ||
+        (category.slug || "").toLowerCase().includes(query) ||
         (category.description || "").toLowerCase().includes(query);
 
       const matchesStatus =
@@ -132,6 +147,8 @@ export default function CategoriesPage() {
       return matchesSearch && matchesStatus;
     });
   }, [currentCategories, search, statusFilter]);
+
+  const allCategories = Object.values(categories).flat();
 
   function openCreateModal() {
     setEditingId(null);
@@ -155,6 +172,8 @@ export default function CategoriesPage() {
   }
 
   function closeModal() {
+    if (saving) return;
+
     setModalOpen(false);
     setEditingId(null);
     setForm(emptyForm());
@@ -174,9 +193,10 @@ export default function CategoriesPage() {
     });
   }
 
-  function saveCategory(event) {
+  async function saveCategory(event) {
     event.preventDefault();
     setFormError("");
+    setNotice("");
 
     const name = form.name.trim();
     const slug = createSlug(form.slug);
@@ -193,118 +213,170 @@ export default function CategoriesPage() {
 
     const duplicate = currentCategories.some(
       (category) =>
-        category.slug.toLowerCase() === slug.toLowerCase() &&
-        category.id !== editingId
+        category.slug?.toLowerCase() === slug.toLowerCase() &&
+        String(category.id) !== String(editingId)
     );
 
     if (duplicate) {
-      setFormError(
-        "This slug already exists in this category group."
-      );
+      setFormError("This slug already exists in this category group.");
       return;
     }
 
-    if (editingId !== null) {
-      setCategories((previous) => ({
-        ...previous,
-        [activeType]: previous[activeType].map((category) =>
-          category.id === editingId
-            ? {
-                ...category,
-                name,
-                slug,
-                description: form.description.trim(),
-                status: form.status,
-              }
-            : category
-        ),
-      }));
-    } else {
-      const nextId =
-        Math.max(
-          0,
-          ...Object.values(categories)
-            .flat()
-            .map((category) => Number(category.id) || 0)
-        ) + 1;
+    setSaving(true);
 
-      setCategories((previous) => ({
-        ...previous,
-        [activeType]: [
-          ...previous[activeType],
-          {
-            id: nextId,
-            name,
-            slug,
-            description: form.description.trim(),
-            status: form.status,
-          },
-        ],
-      }));
+    try {
+      const payload = {
+        name,
+        slug,
+        description: form.description.trim(),
+        status: form.status,
+        type: activeType,
+      };
+
+      if (editingId) {
+        await requestApi(`${API_URL}/${encodeURIComponent(editingId)}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+
+        setNotice("Category updated successfully.");
+      } else {
+        await requestApi(API_URL, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+
+        setNotice("Category created successfully.");
+      }
+
+      setModalOpen(false);
+      setEditingId(null);
+      setForm(emptyForm());
+      setSlugEdited(false);
+
+      await loadCategories();
+    } catch (error) {
+      setFormError(error.message || "Unable to save category.");
+    } finally {
+      setSaving(false);
     }
-
-    closeModal();
   }
 
-  function toggleStatus(category) {
-    setCategories((previous) => ({
-      ...previous,
-      [activeType]: previous[activeType].map((item) =>
-        item.id === category.id
-          ? {
-              ...item,
-              status:
-                item.status === "active" ? "inactive" : "active",
-            }
-          : item
-      ),
-    }));
+  async function toggleStatus(category) {
+    setBusyId(category.id);
+    setPageError("");
+    setNotice("");
+
+    const nextStatus =
+      category.status === "active" ? "inactive" : "active";
+
+    try {
+      await requestApi(`${API_URL}/${encodeURIComponent(category.id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: nextStatus }),
+      });
+
+      setNotice(
+        `Category marked ${nextStatus === "active" ? "active" : "inactive"}.`
+      );
+
+      await loadCategories();
+    } catch (error) {
+      setPageError(error.message || "Unable to update category status.");
+    } finally {
+      setBusyId(null);
+    }
   }
 
-  function confirmDelete() {
-    if (!deleteTarget) return;
+  async function confirmDelete() {
+    if (!deleteTarget || deleting) return;
 
-    setCategories((previous) => ({
-      ...previous,
-      [deleteTarget.type]: previous[deleteTarget.type].filter(
-        (category) => category.id !== deleteTarget.id
-      ),
-    }));
+    setDeleting(true);
+    setPageError("");
+    setNotice("");
 
-    setDeleteTarget(null);
+    try {
+      await requestApi(
+        `${API_URL}/${encodeURIComponent(deleteTarget.id)}`,
+        { method: "DELETE" }
+      );
+
+      setDeleteTarget(null);
+      setNotice("Category deleted successfully.");
+      await loadCategories();
+    } catch (error) {
+      setPageError(error.message || "Unable to delete category.");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   function changeType(type) {
     setActiveType(type);
     setSearch("");
     setStatusFilter("all");
+    setPageError("");
+    setNotice("");
   }
 
   return (
     <div className="space-y-5">
+      {/* Notifications */}
+      {pageError && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700"
+        >
+          <AlertCircle size={18} className="mt-0.5 shrink-0" />
+          <div className="flex-1">{pageError}</div>
+          <button
+            type="button"
+            onClick={() => setPageError("")}
+            aria-label="Dismiss error"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {notice && (
+        <div
+          role="status"
+          className="flex items-center justify-between gap-3 rounded-xl border border-green-100 bg-green-50 p-4 text-sm text-green-700"
+        >
+          <span className="flex items-center gap-2">
+            <Check size={17} />
+            {notice}
+          </span>
+          <button
+            type="button"
+            onClick={() => setNotice("")}
+            aria-label="Dismiss notification"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <SummaryCard
           label="Total Categories"
-          value={Object.values(categories).flat().length}
+          value={allCategories.length}
           icon={Tags}
           iconClass="bg-[#EEF2FA] text-[#2852A0]"
         />
 
         <SummaryCard
           label="Active Categories"
-          value={Object.values(categories)
-            .flat()
-            .filter((item) => item.status === "active").length}
+          value={allCategories.filter((item) => item.status === "active").length}
           icon={Check}
           iconClass="bg-[#EAF9F0] text-[#16834A]"
         />
 
         <SummaryCard
           label="Inactive Categories"
-          value={Object.values(categories)
-            .flat()
-            .filter((item) => item.status === "inactive").length}
+          value={allCategories.filter((item) => item.status === "inactive").length}
           icon={SlidersHorizontal}
           iconClass="bg-[#FFF4E5] text-[#B7791F]"
         />
@@ -313,7 +385,7 @@ export default function CategoriesPage() {
       {/* Main Categories Panel */}
       <section className="overflow-hidden rounded-xl border border-[#EEEEEE] bg-white">
         {/* Tabs */}
-        <div className="grid grid-cols-1 border-b border-[#EEEEEE] sm:grid-cols-3">
+        <div className="flex items-center gap-2 border-b border-[#EEEEEE] px-4 pt-3 sm:px-5">
           {categoryTypes.map((type) => {
             const Icon = type.icon;
             const active = activeType === type.key;
@@ -323,17 +395,17 @@ export default function CategoriesPage() {
                 key={type.key}
                 type="button"
                 onClick={() => changeType(type.key)}
-                className={`flex items-center justify-center gap-2 border-b-2 px-4 py-4 text-sm font-semibold transition ${
+                className={`inline-flex items-center gap-2 rounded-t-lg border-b-2 px-3 py-2.5 text-xs font-semibold transition sm:px-4 sm:text-sm ${
                   active
                     ? "border-[#2852A0] bg-[#2852A0]/5 text-[#2852A0]"
-                    : "border-transparent text-[#666666] hover:bg-[#F9F9F9]"
+                    : "border-transparent text-[#777777] hover:bg-[#F9F9F9] hover:text-[#2852A0]"
                 }`}
               >
-                <Icon size={17} strokeWidth={1.8} />
+                <Icon size={15} strokeWidth={1.8} />
                 <span>{type.label}</span>
 
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs ${
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:text-xs ${
                     active
                       ? "bg-[#2852A0]/10 text-[#2852A0]"
                       : "bg-[#F5F5F5] text-[#888888]"
@@ -352,76 +424,79 @@ export default function CategoriesPage() {
             <h2 className="text-sm font-semibold text-[#081828]">
               {currentType?.label} Categories
             </h2>
-
             <p className="mt-1 text-sm text-[#888888]">
-              {activeType === "blog" &&
-                "Organize your blog posts by category."}
-              {activeType === "services" &&
-                "Organize your website services by category."}
-              {activeType === "locations" &&
-                "Organize your service areas and location pages."}
+              {activeType === "blog"
+                ? "Organize your blog posts by category."
+                : "Organize your website services by category."}
             </p>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative min-w-0 sm:w-[220px]">
               <Search
-                size={17}
+                size={16}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999]"
               />
-
               <input
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search categories..."
-                className="h-10 w-full rounded-lg border border-[#EEEEEE] bg-white pl-9 pr-3 text-sm text-[#081828] outline-none placeholder:text-[#999999] focus:border-[#2852A0]"
+                className="h-9 w-full rounded-lg border border-[#EEEEEE] bg-white pl-9 pr-3 text-sm text-[#081828] outline-none placeholder:text-[#999999] focus:border-[#2852A0]"
               />
             </div>
 
-            <div className="relative sm:w-[150px]">
+            <div className="relative sm:w-[145px]">
               <SlidersHorizontal
-                size={15}
+                size={14}
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#888888]"
               />
-
               <select
                 value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value)
-                }
-                className="h-10 w-full appearance-none rounded-lg border border-[#EEEEEE] bg-white pl-9 pr-9 text-sm text-[#333333] outline-none focus:border-[#2852A0]"
+                onChange={(event) => setStatusFilter(event.target.value)}
+                className="h-9 w-full appearance-none rounded-lg border border-[#EEEEEE] bg-white pl-9 pr-8 text-sm text-[#333333] outline-none focus:border-[#2852A0]"
               >
                 <option value="all">All statuses</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
-
               <ChevronDown
-                size={15}
+                size={14}
                 className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#888888]"
               />
             </div>
+
+            <button
+              type="button"
+              onClick={loadCategories}
+              disabled={loading}
+              title="Refresh categories"
+              aria-label="Refresh categories"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#EEEEEE] px-3 text-sm text-[#666666] hover:bg-[#F9F9F9] disabled:opacity-50"
+            >
+              <RefreshCw
+                size={14}
+                className={loading ? "animate-spin" : ""}
+              />
+              <span className="sm:hidden">Refresh</span>
+            </button>
           </div>
         </div>
 
         {/* Category Table */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left">
+          <table className="w-full min-w-[650px] text-left">
             <thead>
               <tr className="border-b border-[#EEEEEE] bg-[#FCFCFC]">
                 <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wide text-[#888888]">
                   Category
                 </th>
-
                 <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wide text-[#888888]">
                   Slug
                 </th>
-
                 <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wide text-[#888888]">
                   Status
                 </th>
-
                 <th className="px-5 py-3.5 text-right text-[11px] font-semibold uppercase tracking-wide text-[#888888]">
                   Actions
                 </th>
@@ -429,117 +504,130 @@ export default function CategoriesPage() {
             </thead>
 
             <tbody className="divide-y divide-[#EEEEEE]">
-              {filteredCategories.map((category) => (
-                <tr
-                  key={category.id}
-                  className="transition hover:bg-[#FCFCFC]"
-                >
-                  <td className="px-5 py-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EEF2FA] text-[#2852A0]">
-                        <Tags size={17} strokeWidth={1.8} />
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[#081828]">
-                          {category.name}
-                        </p>
-
-                        <p className="mt-1 max-w-[340px] text-xs leading-5 text-[#888888]">
-                          {category.description ||
-                            "No description added."}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td className="px-5 py-4">
-                    <code className="rounded-md bg-[#F7F7F7] px-2 py-1 text-[11px] text-[#666666]">
-                      {category.slug}
-                    </code>
-                  </td>
-
-                  <td className="px-5 py-4">
-                    <button
-                      type="button"
-                      onClick={() => toggleStatus(category)}
-                      aria-label={`Change ${category.name} status`}
-                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ${
-                        category.status === "active"
-                          ? "bg-[#E8F7EE] text-[#16834A]"
-                          : "bg-[#F2F2F2] text-[#777777]"
-                      }`}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          category.status === "active"
-                            ? "bg-[#16834A]"
-                            : "bg-[#999999]"
-                        }`}
-                      />
-
-                      {category.status === "active"
-                        ? "Active"
-                        : "Inactive"}
-                    </button>
-                  </td>
-
-                  <td className="px-5 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(category)}
-                        aria-label={`Edit ${category.name}`}
-                        className="rounded-lg border border-[#EEEEEE] p-2 text-[#666666] transition hover:border-[#2852A0]/30 hover:bg-[#2852A0]/5 hover:text-[#2852A0]"
-                      >
-                        <Pencil size={15} />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setDeleteTarget({
-                            id: category.id,
-                            name: category.name,
-                            type: activeType,
-                          })
-                        }
-                        aria-label={`Delete ${category.name}`}
-                        className="rounded-lg border border-[#EEEEEE] p-2 text-[#777777] transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-
-              {filteredCategories.length === 0 && (
+              {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-5 py-14 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#F5F5F5] text-[#999999]">
-                      <Tags size={22} />
-                    </div>
-
-                    <h3 className="mt-3 text-sm font-semibold text-[#081828]">
-                      {search || statusFilter !== "all"
-                        ? "No categories found"
-                        : `No ${currentType?.label.toLowerCase()} categories yet`}
-                    </h3>
-
-                    <p className="mt-1 text-sm text-[#888888]">
-                      {search || statusFilter !== "all"
-                        ? "Try changing your search or status filter."
-                        : `Add a category to organize your ${currentType?.label.toLowerCase()} content.`}
+                  <td colSpan={4} className="px-5 py-16 text-center">
+                    <LoaderCircle
+                      size={25}
+                      className="mx-auto animate-spin text-[#2852A0]"
+                    />
+                    <p className="mt-3 text-sm text-[#888888]">
+                      Loading categories from database...
                     </p>
                   </td>
                 </tr>
+              ) : (
+                <>
+                  {filteredCategories.map((category) => (
+                    <tr
+                      key={category.id}
+                      className="transition hover:bg-[#FCFCFC]"
+                    >
+                      <td className="px-5 py-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EEF2FA] text-[#2852A0]">
+                            <Tags size={16} strokeWidth={1.8} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-[#081828]">
+                              {category.name}
+                            </p>
+                            <p className="mt-1 max-w-[340px] text-xs leading-5 text-[#888888]">
+                              {category.description || "No description added."}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <code className="rounded-md bg-[#F7F7F7] px-2 py-1 text-[11px] text-[#666666]">
+                          {category.slug}
+                        </code>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <button
+                          type="button"
+                          onClick={() => toggleStatus(category)}
+                          disabled={busyId === category.id}
+                          aria-label={`Change ${category.name} status`}
+                          className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 text-xs font-medium disabled:cursor-wait disabled:opacity-50 ${
+                            category.status === "active"
+                              ? "bg-[#E8F7EE] text-[#16834A]"
+                              : "bg-[#F2F2F2] text-[#777777]"
+                          }`}
+                        >
+                          {busyId === category.id ? (
+                            <LoaderCircle size={13} className="animate-spin" />
+                          ) : (
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                category.status === "active"
+                                  ? "bg-[#16834A]"
+                                  : "bg-[#999999]"
+                              }`}
+                            />
+                          )}
+                          {category.status === "active" ? "Active" : "Inactive"}
+                        </button>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(category)}
+                            aria-label={`Edit ${category.name}`}
+                            className="rounded-lg border border-[#EEEEEE] p-2 text-[#666666] transition hover:border-[#2852A0]/30 hover:bg-[#2852A0]/5 hover:text-[#2852A0]"
+                          >
+                            <Pencil size={14} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDeleteTarget({
+                                id: category.id,
+                                name: category.name,
+                                type: activeType,
+                              })
+                            }
+                            aria-label={`Delete ${category.name}`}
+                            className="rounded-lg border border-[#EEEEEE] p-2 text-[#777777] transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {filteredCategories.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-5 py-14 text-center">
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#F5F5F5] text-[#999999]">
+                          <Tags size={22} />
+                        </div>
+                        <h3 className="mt-3 text-sm font-semibold text-[#081828]">
+                          {search || statusFilter !== "all"
+                            ? "No categories found"
+                            : `No ${currentType?.label.toLowerCase()} categories yet`}
+                        </h3>
+                        <p className="mt-1 text-sm text-[#888888]">
+                          {search || statusFilter !== "all"
+                            ? "Try changing your search or status filter."
+                            : `Add a category to organize your ${currentType?.label.toLowerCase()} content.`}
+                        </p>
+                      </td>
+                    </tr>
+                  )}
+                </>
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Footer and Add Button */}
+        {/* Footer */}
         <div className="flex flex-col gap-4 border-t border-[#EEEEEE] p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <p className="text-sm text-[#888888]">
             Showing{" "}
@@ -556,14 +644,10 @@ export default function CategoriesPage() {
           <button
             type="button"
             onClick={openCreateModal}
-            className="inline-flex items-center justify-center gap-2 self-start rounded-lg bg-[#2852A0] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#204584] sm:self-auto"
+            className="inline-flex items-center justify-center gap-2 self-start rounded-lg bg-[#2852A0] px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-[#204584] sm:self-auto sm:text-sm"
           >
-            <Plus size={17} />
-            Add {activeType === "blog"
-              ? "Blog"
-              : activeType === "services"
-                ? "Service"
-                : "Location"} Category
+            <Plus size={15} />
+            Add {activeType === "blog" ? "Blog" : "Service"} Category
           </button>
         </div>
       </section>
@@ -588,11 +672,8 @@ export default function CategoriesPage() {
                   id="category-modal-title"
                   className="text-lg font-bold text-[#081828]"
                 >
-                  {editingId !== null
-                    ? "Edit Category"
-                    : "Add Category"}
+                  {editingId ? "Edit Category" : "Add Category"}
                 </h2>
-
                 <p className="mt-1 text-sm text-[#888888]">
                   {currentType?.label} category
                 </p>
@@ -601,10 +682,11 @@ export default function CategoriesPage() {
               <button
                 type="button"
                 onClick={closeModal}
+                disabled={saving}
                 aria-label="Close modal"
-                className="rounded-lg p-2 text-[#777777] hover:bg-[#F5F5F5]"
+                className="rounded-lg p-2 text-[#777777] hover:bg-[#F5F5F5] disabled:opacity-50"
               >
-                <X size={19} />
+                <X size={18} />
               </button>
             </div>
 
@@ -616,7 +698,6 @@ export default function CategoriesPage() {
                 >
                   Category Name <span className="text-red-500">*</span>
                 </label>
-
                 <input
                   id="category-name"
                   type="text"
@@ -638,7 +719,6 @@ export default function CategoriesPage() {
                 >
                   URL Slug <span className="text-red-500">*</span>
                 </label>
-
                 <input
                   id="category-slug"
                   type="text"
@@ -651,7 +731,6 @@ export default function CategoriesPage() {
                   placeholder="credit-education"
                   className="h-11 w-full rounded-lg border border-[#EEEEEE] px-3 text-sm text-[#081828] outline-none focus:border-[#2852A0]"
                 />
-
                 <p className="mt-1.5 text-xs text-[#888888]">
                   Lowercase letters, numbers and hyphens only.
                 </p>
@@ -664,7 +743,6 @@ export default function CategoriesPage() {
                 >
                   Description
                 </label>
-
                 <textarea
                   id="category-description"
                   rows={3}
@@ -684,7 +762,6 @@ export default function CategoriesPage() {
                 >
                   Status
                 </label>
-
                 <div className="relative">
                   <select
                     id="category-status"
@@ -697,7 +774,6 @@ export default function CategoriesPage() {
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
-
                   <ChevronDown
                     size={16}
                     className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#888888]"
@@ -711,7 +787,7 @@ export default function CategoriesPage() {
                   className="flex gap-2 rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-600"
                 >
                   <AlertCircle size={17} className="shrink-0" />
-                  {formError}
+                  <span>{formError}</span>
                 </div>
               )}
 
@@ -719,19 +795,27 @@ export default function CategoriesPage() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded-lg border border-[#EEEEEE] px-4 py-2.5 text-sm font-semibold text-[#666666] hover:bg-[#F9F9F9]"
+                  disabled={saving}
+                  className="rounded-lg border border-[#EEEEEE] px-4 py-2.5 text-sm font-semibold text-[#666666] hover:bg-[#F9F9F9] disabled:opacity-50"
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2852A0] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#204584]"
+                  disabled={saving}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2852A0] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#204584] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <Check size={16} />
-                  {editingId !== null
-                    ? "Save Changes"
-                    : "Create Category"}
+                  {saving ? (
+                    <LoaderCircle size={16} className="animate-spin" />
+                  ) : (
+                    <Check size={16} />
+                  )}
+                  {saving
+                    ? "Saving..."
+                    : editingId
+                      ? "Save Changes"
+                      : "Create Category"}
                 </button>
               </div>
             </form>
@@ -771,7 +855,8 @@ export default function CategoriesPage() {
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
-                className="rounded-lg border border-[#EEEEEE] px-4 py-2.5 text-sm font-semibold text-[#666666] hover:bg-[#F9F9F9]"
+                disabled={deleting}
+                className="rounded-lg border border-[#EEEEEE] px-4 py-2.5 text-sm font-semibold text-[#666666] hover:bg-[#F9F9F9] disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -779,9 +864,13 @@ export default function CategoriesPage() {
               <button
                 type="button"
                 onClick={confirmDelete}
-                className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700"
+                disabled={deleting}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Delete Category
+                {deleting && (
+                  <LoaderCircle size={15} className="animate-spin" />
+                )}
+                {deleting ? "Deleting..." : "Delete Category"}
               </button>
             </div>
           </div>
@@ -801,7 +890,6 @@ function SummaryCard({ label, value, icon: Icon, iconClass }) {
             {value}
           </p>
         </div>
-
         <div
           className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconClass}`}
         >

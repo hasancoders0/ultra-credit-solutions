@@ -1,27 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowLeft,
-  Save,
-  Globe,
   Plus,
   Trash2,
-  Star,
-  Upload,
-  X,
-  Image as ImageIcon,
+  Eye,
 } from "lucide-react";
 
-import blogs from "@/data/blog";
-import initialCategories from "@/data/categories";
+import FormSidebar, {
+  SidebarCard,
+  SidebarField,
+  SidebarInput,
+  SidebarSelect,
+  SidebarTextarea,
+  SidebarCheckbox,
+  FormActions,
+} from "@/components/admin/shared/FormSidebar";
 
-const STORAGE_KEY = "ucs-admin-blog-posts";
-const CATEGORY_STORAGE_KEY = "ucs-admin-categories";
-const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
+import ImagePicker from "@/components/admin/media/ImagePicker";
+import RichTextEditor from "@/components/admin/shared/RichTextEditor";
 
 const emptyPost = {
   id: null,
@@ -50,294 +51,196 @@ function createSlug(value = "") {
     .replace(/^-+|-+$/g, "");
 }
 
-function getSavedPosts() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : blogs;
-  } catch {
-    return blogs;
-  }
-}
-
-function getSavedCategories() {
-  try {
-    const saved = localStorage.getItem(CATEGORY_STORAGE_KEY);
-    const data = saved ? JSON.parse(saved) : initialCategories;
-
-    return Array.isArray(data?.blog) ? data.blog : [];
-  } catch {
-    return Array.isArray(initialCategories.blog) ? initialCategories.blog : [];
-  }
+// RichTextEditor stores formatted HTML. Convert it to plain text only for
+// required-field validation; keep the original HTML when saving the post.
+function richTextToPlainText(value = "") {
+  return String(value)
+    .replace(/<br\s*\/?\s*>/gi, " ")
+    .replace(/<\/(p|div|h[1-6]|li|ul|ol|blockquote)>/gi, " ")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
 }
 
 export default function BlogPostForm({ postId = null }) {
   const router = useRouter();
   const isEditing = postId !== null;
-  const fileInputRef = useRef(null);
 
   const [form, setForm] = useState(emptyPost);
   const [tagInput, setTagInput] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [categoryOptions, setCategoryOptions] = useState(() =>
-    getSavedCategories(),
-  );
+  const [saving, setSaving] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState([]);
 
-  const refreshCategories = useCallback(() => {
-    setCategoryOptions(getSavedCategories());
+  const refreshCategories = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/categories", {
+        method: "GET",
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("Could not load categories.");
+      const result = await response.json();
+      const categories = Array.isArray(result)
+        ? result
+        : Array.isArray(result.categories)
+          ? result.categories
+          : [];
+      setCategoryOptions(categories.filter((category) => category.type === "blog" || category.type === "both"));
+    } catch (error) {
+      console.error("Category loading error:", error);
+      toast.error("Could not load blog categories.");
+    }
   }, []);
 
   useEffect(() => {
     refreshCategories();
-
-    window.addEventListener("focus", refreshCategories);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        refreshCategories();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    const handleCategoriesUpdated = () => {
-      refreshCategories();
-    };
-
-    window.addEventListener("ucs-categories-updated", handleCategoriesUpdated);
-
-    return () => {
-      window.removeEventListener("focus", refreshCategories);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener(
-        "ucs-categories-updated",
-        handleCategoriesUpdated,
-      );
-    };
+    const handleFocus = () => refreshCategories();
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
   }, [refreshCategories]);
 
-  // Load existing post when editing.
   useEffect(() => {
-    const allPosts = getSavedPosts();
+    let cancelled = false;
 
-    if (isEditing) {
-      const post = allPosts.find((item) => String(item.id) === String(postId));
+    async function loadPost() {
+      setLoading(true);
+      try {
+        if (!isEditing) {
+          if (!cancelled) {
+            setForm(emptyPost);
+            setSlugEdited(false);
+          }
+          return;
+        }
 
-      if (!post) {
-        toast.error("Blog post not found.");
-        router.replace("/admin/blog");
-        setLoading(false);
-        return;
-      }
+        const response = await fetch("/api/admin/blog", { cache: "no-store" });
+        if (!response.ok) throw new Error("Could not load blog posts.");
+        const result = await response.json();
+        const posts = Array.isArray(result)
+          ? result
+          : Array.isArray(result.posts)
+            ? result.posts
+            : [];
+        const post = posts.find((item) => String(item.id ?? item._id) === String(postId));
 
-      setForm({
-        ...emptyPost,
-        ...post,
-        featuredImage: {
-          ...emptyPost.featuredImage,
-          ...(post.featuredImage || {}),
-        },
-        seo: {
-          ...emptyPost.seo,
-          ...(post.seo || {}),
-        },
-        tags: Array.isArray(post.tags) ? post.tags : [],
-        content:
-          Array.isArray(post.content) && post.content.length
+        if (!post) {
+          if (!cancelled) {
+            toast.error("Blog post not found.");
+            router.replace("/admin/blog");
+          }
+          return;
+        }
+        if (cancelled) return;
+
+        setForm({
+          ...emptyPost,
+          ...post,
+          id: post.id ?? post._id,
+          featuredImage: { ...emptyPost.featuredImage, ...(post.featuredImage || {}) },
+          seo: { ...emptyPost.seo, ...(post.seo || {}) },
+          tags: Array.isArray(post.tags) ? post.tags : [],
+          content: Array.isArray(post.content) && post.content.length
             ? post.content.map((section) => ({
                 heading: section.heading || "",
-                paragraphs:
-                  Array.isArray(section.paragraphs) && section.paragraphs.length
-                    ? section.paragraphs
-                    : [""],
+                paragraphs: Array.isArray(section.paragraphs) && section.paragraphs.length
+                  ? section.paragraphs
+                  : [""],
               }))
             : [{ heading: "", paragraphs: [""] }],
-      });
-
-      setSlugEdited(true);
+        });
+        setSlugEdited(true);
+      } catch (error) {
+        console.error("Blog loading error:", error);
+        if (!cancelled) toast.error("Could not load the blog post.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
 
-    setLoading(false);
+    loadPost();
+    return () => { cancelled = true; };
   }, [isEditing, postId, router]);
 
   const updateField = (field, value) => {
-    setForm((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
+    setForm((previous) => ({ ...previous, [field]: value }));
   };
 
   const updateSeo = (field, value) => {
-    setForm((previous) => ({
-      ...previous,
-      seo: {
-        ...previous.seo,
-        [field]: value,
-      },
-    }));
+    setForm((previous) => ({ ...previous, seo: { ...previous.seo, [field]: value } }));
   };
 
   const updateImage = (field, value) => {
     setForm((previous) => ({
       ...previous,
-      featuredImage: {
-        ...previous.featuredImage,
-        [field]: value,
-      },
+      featuredImage: { ...previous.featuredImage, [field]: value },
     }));
-  };
-
-  // Upload an image from the user's device.
-  const handleFeaturedImageUpload = (event) => {
-    const file = event.target.files?.[0];
-
-    if (!file) return;
-
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-
-    if (!allowedTypes.includes(file.type)) {
-      toast.error("Please select a JPG, PNG, WebP or GIF image.");
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size > MAX_IMAGE_SIZE) {
-      toast.error("Image size must be 2 MB or less.");
-      event.target.value = "";
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      if (typeof reader.result !== "string") {
-        toast.error("Could not read this image. Please try again.");
-        return;
-      }
-
-      setForm((previous) => ({
-        ...previous,
-        featuredImage: {
-          ...previous.featuredImage,
-          src: reader.result,
-          alt: previous.featuredImage?.alt || "",
-        },
-      }));
-
-      toast.success("Featured image added.");
-    };
-
-    reader.onerror = () => {
-      toast.error("Unable to read this image. Please try another file.");
-    };
-
-    reader.readAsDataURL(file);
-  };
-
-  const removeFeaturedImage = () => {
-    setForm((previous) => ({
-      ...previous,
-      featuredImage: {
-        ...previous.featuredImage,
-        src: "",
-      },
-    }));
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
   };
 
   const updateSection = (index, field, value) => {
     setForm((previous) => ({
       ...previous,
-      content: previous.content.map((section, i) =>
-        i === index ? { ...section, [field]: value } : section,
-      ),
+      content: previous.content.map((section, i) => i === index ? { ...section, [field]: value } : section),
     }));
   };
 
   const updateParagraph = (sectionIndex, paragraphIndex, value) => {
     setForm((previous) => ({
       ...previous,
-      content: previous.content.map((section, i) =>
-        i === sectionIndex
-          ? {
-              ...section,
-              paragraphs: section.paragraphs.map((paragraph, j) =>
-                j === paragraphIndex ? value : paragraph,
-              ),
-            }
-          : section,
-      ),
+      content: previous.content.map((section, i) => i === sectionIndex
+        ? { ...section, paragraphs: section.paragraphs.map((paragraph, j) => j === paragraphIndex ? value : paragraph) }
+        : section),
     }));
   };
 
   const addSection = () => {
-    setForm((previous) => ({
-      ...previous,
-      content: [...previous.content, { heading: "", paragraphs: [""] }],
-    }));
+    setForm((previous) => ({ ...previous, content: [...previous.content, { heading: "", paragraphs: [""] }] }));
   };
 
   const removeSection = (index) => {
-    setForm((previous) => ({
-      ...previous,
-      content: previous.content.filter((_, i) => i !== index),
-    }));
+    setForm((previous) => ({ ...previous, content: previous.content.filter((_, i) => i !== index) }));
   };
 
   const addParagraph = (sectionIndex) => {
     setForm((previous) => ({
       ...previous,
-      content: previous.content.map((section, i) =>
-        i === sectionIndex
-          ? {
-              ...section,
-              paragraphs: [...section.paragraphs, ""],
-            }
-          : section,
-      ),
+      content: previous.content.map((section, i) => i === sectionIndex
+        ? { ...section, paragraphs: [...section.paragraphs, ""] }
+        : section),
     }));
   };
 
   const removeParagraph = (sectionIndex, paragraphIndex) => {
     setForm((previous) => ({
       ...previous,
-      content: previous.content.map((section, i) =>
-        i === sectionIndex
-          ? {
-              ...section,
-              paragraphs:
-                section.paragraphs.length > 1
-                  ? section.paragraphs.filter((_, j) => j !== paragraphIndex)
-                  : [""],
-            }
-          : section,
-      ),
+      content: previous.content.map((section, i) => i === sectionIndex
+        ? { ...section, paragraphs: section.paragraphs.length > 1 ? section.paragraphs.filter((_, j) => j !== paragraphIndex) : [""] }
+        : section),
     }));
   };
 
   const addTag = () => {
     const tag = tagInput.trim().replace(/,$/, "");
-
     if (!tag) return;
-
     if (form.tags.some((item) => item.toLowerCase() === tag.toLowerCase())) {
       setTagInput("");
       return;
     }
-
     updateField("tags", [...form.tags, tag]);
     setTagInput("");
   };
 
-  const savePost = (event, requestedStatus) => {
-    event.preventDefault();
+  const savePost = async (event, requestedStatus) => {
+    event?.preventDefault();
+    if (saving) return;
 
     const status = requestedStatus || form.status;
     const slug = createSlug(form.slug || form.title);
-
     if (!form.title.trim() || !slug || !form.category) {
       toast.error("Title, slug and category are required.");
       return;
@@ -345,90 +248,65 @@ export default function BlogPostForm({ postId = null }) {
 
     if (
       status === "published" &&
-      (!form.excerpt.trim() ||
+      (
+        !richTextToPlainText(form.excerpt) ||
         !form.content.some(
           (section) =>
             section.heading.trim() &&
-            section.paragraphs.some((paragraph) => paragraph.trim()),
-        ))
+            section.paragraphs.some((paragraph) => richTextToPlainText(paragraph))
+        )
+      )
     ) {
       toast.error("Add an excerpt and at least one complete content section.");
       return;
     }
 
-    const allPosts = getSavedPosts();
-
-    if (
-      allPosts.some(
-        (post) => post.slug === slug && String(post.id) !== String(postId),
-      )
-    ) {
-      toast.error("This slug is already in use.");
-      return;
-    }
-
     const now = new Date().toISOString().slice(0, 10);
-
-    const existing = allPosts.find(
-      (post) => String(post.id) === String(postId),
-    );
-
     const nextPost = {
       ...form,
-      id: isEditing
-        ? existing.id
-        : Math.max(0, ...allPosts.map((post) => Number(post.id) || 0)) + 1,
       slug,
       title: form.title.trim(),
       excerpt: form.excerpt.trim(),
       category: form.category,
       tags: form.tags,
-      featuredImage: {
-        src: form.featuredImage.src.trim(),
-        alt: form.featuredImage.alt.trim(),
-      },
+      featuredImage: { src: form.featuredImage.src.trim(), alt: form.featuredImage.alt.trim() },
       author: form.author.trim() || "Ultra Credit Solutions Team",
       status,
       featured: Boolean(form.featured),
-      publishedAt:
-        status === "published"
-          ? existing?.publishedAt || form.publishedAt || now
-          : status === "scheduled"
-            ? form.publishedAt
-            : null,
+      publishedAt: status === "published" ? form.publishedAt || now : status === "scheduled" ? form.publishedAt : null,
       updatedAt: now,
       seo: {
         title: form.seo.title.trim() || form.title.trim(),
         description: form.seo.description.trim() || form.excerpt.trim(),
       },
-      content: form.content
-        .map((section) => ({
-          heading: section.heading.trim(),
-          paragraphs: section.paragraphs
-            .map((paragraph) => paragraph.trim())
-            .filter(Boolean),
-        }))
-        .filter((section) => section.heading || section.paragraphs.length),
+      content: form.content.map((section) => ({
+        heading: section.heading.trim(),
+        paragraphs: section.paragraphs
+          .map((paragraph) => paragraph.trim())
+          .filter((paragraph) => richTextToPlainText(paragraph)),
+      })).filter((section) => section.heading || section.paragraphs.length),
     };
 
-    const nextPosts = isEditing
-      ? allPosts.map((post) =>
-          String(post.id) === String(postId) ? nextPost : post,
-        )
-      : [nextPost, ...allPosts];
-
+    setSaving(true);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextPosts));
-
-      toast.success(
-        status === "published" ? "Post saved as published" : "Blog post saved",
-      );
-
+      const endpoint = isEditing
+        ? `/api/admin/blog/${encodeURIComponent(postId)}`
+        : "/api/admin/blog";
+      const response = await fetch(endpoint, {
+        method: isEditing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nextPost),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || result.error || "Could not save the blog post.");
+      toast.success(status === "published" ? "Post saved as published" : "Blog post saved");
       router.push("/admin/blog");
-    } catch {
-      toast.error(
-        "Could not save this post. Browser storage may be full. Try a smaller image.",
-      );
+      router.refresh();
+    } catch (error) {
+      console.error("Blog save error:", error);
+      toast.error(error.message || "Could not save this blog post.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -448,18 +326,25 @@ export default function BlogPostForm({ postId = null }) {
 
   const labelClass = "text-sm font-medium text-[#081828]";
 
-  // Keep categories selectable for existing posts, even if inactive.
+  // Keep existing categories selectable for old posts,
+  // even if a category is inactive or has been deleted.
   const availableCategories = categoryOptions.filter(
     (category) =>
-      category.status === "active" || category.name === form.category,
+      category.status === "active" ||
+      category.name === form.category
   );
 
   const existingCategoryMissing =
     form.category &&
-    !availableCategories.some((category) => category.name === form.category);
+    !availableCategories.some(
+      (category) => category.name === form.category
+    );
 
   return (
-    <form className="space-y-4" onSubmit={(event) => savePost(event)}>
+    <form
+      className="space-y-4"
+      onSubmit={(event) => savePost(event)}
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Link
@@ -480,25 +365,12 @@ export default function BlogPostForm({ postId = null }) {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={(event) => savePost(event, "draft")}
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#EEEEEE] bg-white px-3 text-sm font-medium text-[#555555] hover:bg-gray-50"
-          >
-            <Save size={15} />
-            Save Draft
-          </button>
-
-          <button
-            type="button"
-            onClick={(event) => savePost(event, "published")}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#2852A0] px-4 text-sm font-medium text-white hover:bg-[#1F4386]"
-          >
-            <Globe size={15} />
-            Publish
-          </button>
-        </div>
+        <FormActions
+          onSaveDraft={(event) => savePost(event, "draft")}
+          onPublish={(event) => savePost(event, "published")}
+          saving={saving}
+          publishLabel="Publish"
+        />
       </div>
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -525,7 +397,9 @@ export default function BlogPostForm({ postId = null }) {
                     setForm((previous) => ({
                       ...previous,
                       title,
-                      slug: slugEdited ? previous.slug : createSlug(title),
+                      slug: slugEdited
+                        ? previous.slug
+                        : createSlug(title),
                       seo: {
                         ...previous.seo,
                         title: previous.seo.title || title,
@@ -551,7 +425,10 @@ export default function BlogPostForm({ postId = null }) {
                     value={form.slug}
                     onChange={(event) => {
                       setSlugEdited(true);
-                      updateField("slug", createSlug(event.target.value));
+                      updateField(
+                        "slug",
+                        createSlug(event.target.value)
+                      );
                     }}
                     placeholder="your-post-slug"
                     className="h-11 min-w-0 flex-1 px-3 text-sm outline-none"
@@ -563,16 +440,11 @@ export default function BlogPostForm({ postId = null }) {
                 <label htmlFor="blog-excerpt" className={labelClass}>
                   Excerpt
                 </label>
-                <textarea
-                  id="blog-excerpt"
-                  rows={3}
-                  maxLength={350}
+                <RichTextEditor
                   value={form.excerpt}
-                  onChange={(event) =>
-                    updateField("excerpt", event.target.value)
-                  }
+                  onChange={(html) => updateField("excerpt", html)}
                   placeholder="Short summary of the article..."
-                  className={textareaClass}
+                  minHeight={140}
                 />
               </div>
 
@@ -623,7 +495,7 @@ export default function BlogPostForm({ postId = null }) {
                         updateSection(
                           sectionIndex,
                           "heading",
-                          event.target.value,
+                          event.target.value
                         )
                       }
                       placeholder="Section heading"
@@ -631,41 +503,42 @@ export default function BlogPostForm({ postId = null }) {
                     />
                   </div>
 
-                  {section.paragraphs.map((paragraph, paragraphIndex) => (
-                    <div key={`paragraph-${sectionIndex}-${paragraphIndex}`}>
-                      <div className="mb-1 flex items-center justify-between">
-                        <label
-                          htmlFor={`paragraph-${sectionIndex}-${paragraphIndex}`}
-                          className={labelClass}
-                        >
-                          Paragraph {paragraphIndex + 1}
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            removeParagraph(sectionIndex, paragraphIndex)
+                  {section.paragraphs.map(
+                    (paragraph, paragraphIndex) => (
+                      <div
+                        key={`paragraph-${sectionIndex}-${paragraphIndex}`}
+                      >
+                        <div className="mb-1 flex items-center justify-between">
+                          <label
+                            htmlFor={`paragraph-${sectionIndex}-${paragraphIndex}`}
+                            className={labelClass}
+                          >
+                            Paragraph {paragraphIndex + 1}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeParagraph(
+                                sectionIndex,
+                                paragraphIndex
+                              )
+                            }
+                            className="text-xs text-[#888888] hover:text-red-600"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <RichTextEditor
+                          value={paragraph}
+                          onChange={(html) =>
+                            updateParagraph(sectionIndex, paragraphIndex, html)
                           }
-                          className="text-xs text-[#888888] hover:text-red-600"
-                        >
-                          Remove
-                        </button>
+                          placeholder="Write this paragraph..."
+                          minHeight={220}
+                        />
                       </div>
-                      <textarea
-                        id={`paragraph-${sectionIndex}-${paragraphIndex}`}
-                        rows={4}
-                        value={paragraph}
-                        onChange={(event) =>
-                          updateParagraph(
-                            sectionIndex,
-                            paragraphIndex,
-                            event.target.value,
-                          )
-                        }
-                        placeholder="Write this paragraph..."
-                        className={textareaClass}
-                      />
-                    </div>
-                  ))}
+                    )
+                  )}
 
                   <button
                     type="button"
@@ -695,14 +568,19 @@ export default function BlogPostForm({ postId = null }) {
                   id="seo-title"
                   maxLength={70}
                   value={form.seo.title}
-                  onChange={(event) => updateSeo("title", event.target.value)}
+                  onChange={(event) =>
+                    updateSeo("title", event.target.value)
+                  }
                   placeholder="Search engine title"
                   className={inputClass}
                 />
               </div>
 
               <div>
-                <label htmlFor="seo-description" className={labelClass}>
+                <label
+                  htmlFor="seo-description"
+                  className={labelClass}
+                >
                   SEO Description
                 </label>
                 <textarea
@@ -721,156 +599,101 @@ export default function BlogPostForm({ postId = null }) {
           </section>
         </div>
 
-        {/* Sidebar */}
-        <aside className="space-y-4">
-          {/* Publishing */}
-          <section className="rounded-xl border border-[#EEEEEE] bg-white p-4">
-            <h2 className="text-base font-semibold text-[#081828]">
-              Publishing
-            </h2>
-
-            <div className="mt-4">
-              <label htmlFor="blog-status" className={labelClass}>
-                Status
-              </label>
-              <select
-                id="blog-status"
-                value={form.status}
-                onChange={(event) => updateField("status", event.target.value)}
-                className={inputClass}
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="scheduled">Scheduled</option>
-              </select>
-            </div>
-
-            {form.status === "scheduled" && (
-              <div className="mt-4">
-                <label htmlFor="scheduled-date" className={labelClass}>
-                  Publication Date
-                </label>
-                <input
+        {/* Shared Form Sidebar */}
+        <FormSidebar
+          status={form.status}
+          onStatusChange={(value) => updateField("status", value)}
+          statuses={[
+            { value: "draft", label: "Draft" },
+            { value: "published", label: "Published" },
+            { value: "scheduled", label: "Scheduled" },
+          ]}
+          featured={form.featured}
+          onFeaturedChange={(value) => updateField("featured", value)}
+          featuredLabel="Featured post"
+        >
+          {form.status === "scheduled" && (
+            <SidebarCard title="Schedule Publication">
+              <SidebarField label="Publication Date" htmlFor="scheduled-date">
+                <SidebarInput
                   id="scheduled-date"
                   type="date"
                   value={form.publishedAt || ""}
-                  onChange={(event) =>
-                    updateField("publishedAt", event.target.value || null)
-                  }
-                  className={inputClass}
+                  onChange={(event) => updateField("publishedAt", event.target.value || null)}
                 />
-              </div>
-            )}
+              </SidebarField>
+            </SidebarCard>
+          )}
 
-            <div className="mt-4">
-              <label htmlFor="blog-author" className={labelClass}>
-                Author
-              </label>
-              <input
+          <SidebarCard title="Author">
+            <SidebarField label="Author Name" htmlFor="blog-author">
+              <SidebarInput
                 id="blog-author"
                 value={form.author}
                 onChange={(event) => updateField("author", event.target.value)}
-                className={inputClass}
+                placeholder="Author name"
               />
-            </div>
+            </SidebarField>
+          </SidebarCard>
 
-            <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-[#555555]">
-              <input
-                type="checkbox"
-                checked={form.featured}
-                onChange={(event) =>
-                  updateField("featured", event.target.checked)
-                }
-                className="h-4 w-4 accent-[#2852A0]"
-              />
-              <Star size={15} className="text-amber-500" />
-              Featured post
-            </label>
-          </section>
-
-          {/* Organization */}
-          <section className="rounded-xl border border-[#EEEEEE] bg-white p-4">
-            <h2 className="text-base font-semibold text-[#081828]">
-              Organization
-            </h2>
-
-            <div className="mt-4">
-              <label htmlFor="blog-category" className={labelClass}>
-                Category *
-              </label>
-
-              <select
+          <SidebarCard title="Organization">
+            <SidebarField label="Category *" htmlFor="blog-category">
+              <SidebarSelect
                 id="blog-category"
                 required
                 value={form.category}
-                onChange={(event) =>
-                  updateField("category", event.target.value)
-                }
-                className={inputClass}
+                onChange={(event) => updateField("category", event.target.value)}
               >
                 <option value="">Select category</option>
-
                 {availableCategories.map((category) => (
-                  <option key={category.id} value={category.name}>
-                    {category.name}
-                    {category.status === "inactive" ? " (Inactive)" : ""}
+                  <option key={category.id ?? category._id ?? category.name} value={category.name}>
+                    {category.name}{category.status === "inactive" ? " (Inactive)" : ""}
                   </option>
                 ))}
-
                 {existingCategoryMissing && (
-                  <option value={form.category}>
-                    {form.category} (Existing post)
-                  </option>
+                  <option value={form.category}>{form.category} (Existing post)</option>
                 )}
-              </select>
+              </SidebarSelect>
+            </SidebarField>
 
-              {availableCategories.length === 0 && !form.category && (
-                <p className="mt-2 text-xs leading-5 text-[#888888]">
-                  No active blog categories available. Add one from Admin →
-                  Categories.
-                </p>
-              )}
-            </div>
+            {availableCategories.length === 0 && !form.category && (
+              <p className="mt-2 text-xs leading-5 text-[#888888]">
+                No active blog categories available. Add one from Admin → Categories.
+              </p>
+            )}
 
             <div className="mt-4">
-              <label htmlFor="blog-tags" className={labelClass}>
-                Tags
-              </label>
-
-              <div className="mt-1.5 flex gap-2">
-                <input
-                  id="blog-tags"
-                  value={tagInput}
-                  onChange={(event) => setTagInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      addTag();
-                    }
-                  }}
-                  placeholder="Add a tag"
-                  className="h-10 min-w-0 flex-1 rounded-lg border border-[#EEEEEE] px-3 text-sm outline-none focus:border-[#2852A0]"
-                />
-                <button
-                  type="button"
-                  onClick={addTag}
-                  className="h-10 rounded-lg border border-[#EEEEEE] px-3 text-sm font-medium text-[#2852A0] hover:bg-blue-50"
-                >
-                  Add
-                </button>
-              </div>
+              <SidebarField label="Tags" htmlFor="blog-tags">
+                <div className="flex gap-2">
+                  <SidebarInput
+                    id="blog-tags"
+                    value={tagInput}
+                    onChange={(event) => setTagInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        addTag();
+                      }
+                    }}
+                    placeholder="Add a tag"
+                    className="min-w-0 flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={addTag}
+                    className="h-11 shrink-0 rounded-lg border border-[#EEEEEE] px-3 text-sm font-medium text-[#2852A0] hover:bg-blue-50"
+                  >
+                    Add
+                  </button>
+                </div>
+              </SidebarField>
 
               <div className="mt-3 flex flex-wrap gap-2">
                 {form.tags.map((tag) => (
                   <button
                     key={tag}
                     type="button"
-                    onClick={() =>
-                      updateField(
-                        "tags",
-                        form.tags.filter((item) => item !== tag),
-                      )
-                    }
+                    onClick={() => updateField("tags", form.tags.filter((item) => item !== tag))}
                     title={`Remove ${tag}`}
                     className="rounded-md bg-[#F4F6FA] px-2.5 py-1.5 text-xs text-[#555F70] hover:bg-red-50 hover:text-red-600"
                   >
@@ -879,122 +702,29 @@ export default function BlogPostForm({ postId = null }) {
                 ))}
               </div>
             </div>
-          </section>
+          </SidebarCard>
 
-          {/* Featured Image */}
-          <section className="rounded-xl border border-[#EEEEEE] bg-white p-4">
-            <h2 className="text-base font-semibold text-[#081828]">
-              Featured Image
-            </h2>
+          <SidebarCard title="Featured Image">
+            <ImagePicker
+              value={form.featuredImage.src}
+              onChange={(value) => updateImage("src", value)}
+              alt={form.featuredImage.alt}
+              onAltChange={(value) => updateImage("alt", value)}
+            />
+          </SidebarCard>
 
-            <div className="mt-4 space-y-4">
-              <div>
-                <label htmlFor="featured-image-upload" className={labelClass}>
-                  Upload from device
-                </label>
-
-                <input
-                  ref={fileInputRef}
-                  id="featured-image-upload"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  onChange={handleFeaturedImageUpload}
-                  className="sr-only"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="mt-1.5 flex min-h-28 w-full flex-col items-center justify-center rounded-lg border border-dashed border-[#D6DCE8] bg-[#FAFBFD] px-3 py-4 text-center transition hover:border-[#2852A0] hover:bg-blue-50"
-                >
-                  {form.featuredImage.src ? (
-                    <>
-                      <ImageIcon size={23} className="text-[#2852A0]" />
-                      <span className="mt-2 text-sm font-medium text-[#2852A0]">
-                        Choose a different image
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Upload size={23} className="text-[#2852A0]" />
-                      <span className="mt-2 text-sm font-medium text-[#2852A0]">
-                        Click to upload image
-                      </span>
-                      <span className="mt-1 text-xs text-[#888888]">
-                        JPG, PNG, WebP or GIF · Max 2 MB
-                      </span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {form.featuredImage.src && (
-                <div className="overflow-hidden rounded-lg border border-[#EEEEEE]">
-                  <div className="relative">
-                    <img
-                      src={form.featuredImage.src}
-                      alt={form.featuredImage.alt || "Featured image preview"}
-                      className="aspect-video w-full object-cover"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={removeFeaturedImage}
-                      aria-label="Remove featured image"
-                      title="Remove image"
-                      className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg bg-white text-red-600 shadow-sm hover:bg-red-50"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-
-                  <p className="px-3 py-2 text-xs text-[#888888]">
-                    Image preview
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="image-src" className={labelClass}>
-                  Or use an Image URL
-                </label>
-                <input
-                  id="image-src"
-                  type="url"
-                  value={
-                    form.featuredImage.src.startsWith("data:")
-                      ? ""
-                      : form.featuredImage.src
-                  }
-                  onChange={(event) => {
-                    updateImage("src", event.target.value);
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = "";
-                    }
-                  }}
-                  placeholder="https://example.com/image.jpg"
-                  className={inputClass}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="image-alt" className={labelClass}>
-                  Image Alt Text
-                </label>
-                <input
-                  id="image-alt"
-                  value={form.featuredImage.alt}
-                  onChange={(event) => updateImage("alt", event.target.value)}
-                  placeholder="Describe the image"
-                  className={inputClass}
-                />
-                <p className="mt-1.5 text-xs leading-5 text-[#888888]">
-                  Describe the image for accessibility and search engines.
-                </p>
-              </div>
-            </div>
-          </section>
-        </aside>
+          {isEditing && (
+            <Link
+              href={`/blog/${form.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#EEEEEE] bg-white text-sm font-medium text-[#555555] hover:bg-gray-50"
+            >
+              <Eye size={16} />
+              Preview Post
+            </Link>
+          )}
+        </FormSidebar>
       </div>
     </form>
   );

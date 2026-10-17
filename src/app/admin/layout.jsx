@@ -1,12 +1,26 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 import Sidebar from "@/components/admin/Sidebar";
 import Header from "@/components/admin/Header";
 
 export default function AdminLayout({ children }) {
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const isLoginPage = pathname === "/admin/login";
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  // Standalone login page: no dashboard sidebar or header.
+  if (isLoginPage) {
+    return <div className="min-h-screen bg-[#F5F7FB]">{children}</div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#F9F9F9]">

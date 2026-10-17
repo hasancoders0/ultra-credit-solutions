@@ -1,30 +1,35 @@
+
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-export default function SingleCTA() {
+export default function SingleCTA({ service }) {
   return (
-    <section className="bg-[#2852A0] py-16 sm:py-20">
-      <div className="mx-auto max-w-4xl px-5 text-center sm:px-8">
-        <span className="text-sm font-semibold uppercase tracking-widest text-white/70">
-          Take the Next Step
-        </span>
+    <section className="bg-white px-5 pb-16 sm:px-8 sm:pb-20 lg:px-16 lg:pb-24">
+      <div className="mx-auto max-w-[1200px] overflow-hidden rounded-[24px] bg-[#2852A0] px-6 py-10 sm:px-12 sm:py-14">
+        <div className="flex flex-col items-start justify-between gap-7 md:flex-row md:items-center">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/70">
+              Take the Next Step
+            </p>
 
-        <h2 className="mt-4 text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
-          Ready to Understand Your Credit Options?
-        </h2>
+            <h2 className="mt-3 text-2xl font-bold leading-tight text-white sm:text-3xl">
+              Have questions about {service?.title || "your credit"}?
+            </h2>
 
-        <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-white/80">
-          Start a conversation with our team to discuss your concerns and
-          explore the next steps that may be appropriate for you.
-        </p>
+            <p className="mt-4 text-sm leading-7 text-white/80 sm:text-base">
+              Contact our team to discuss your concerns and learn about
+              possible next steps for your situation.
+            </p>
+          </div>
 
-        <Link
-          href="/appointment"
-          className="mt-8 inline-flex items-center gap-2 rounded-lg bg-[#FF6B81] px-7 py-4 font-semibold text-white transition hover:bg-[#f45570]"
-        >
-          Make an Appointment Today
-          <ArrowRight size={18} />
-        </Link>
+          <Link
+            href="/appointment"
+            className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#FF6B81] px-6 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#ff526d]"
+          >
+            Make an Appointment
+            <ArrowRight size={18} />
+          </Link>
+        </div>
       </div>
     </section>
   );

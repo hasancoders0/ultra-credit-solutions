@@ -1,12 +1,26 @@
+
 import { faqPageCategories } from "@/data/faqPage";
 import FAQAccordion from "@/components/faq/FAQAccordion";
 
 export const metadata = {
-  title: "Frequently Asked Questions | Ultra Credit Solutions",
+  title: "Frequently Asked Questions",
   description:
-    "Find answers to common questions about credit repair, credit reports, credit scores, dispute processes, service pricing, and Ultra Credit Solutions.",
+    "Find answers to common questions about credit repair, credit reports, credit scores, dispute processes, service pricing, and Ultra Credit Solutions USA.",
   alternates: {
     canonical: "/faq",
+  },
+  openGraph: {
+    title: "Frequently Asked Questions | Ultra Credit Solutions USA",
+    description:
+      "Get answers to common questions about credit reports, credit scores, credit repair services, pricing, and the dispute process.",
+    url: "/faq",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Frequently Asked Questions | Ultra Credit Solutions USA",
+    description:
+      "Explore answers to common questions about credit reports, credit scores, services, and pricing.",
   },
 };
 
@@ -33,13 +47,12 @@ export default function FAQPage() {
 
       {/* FAQ Categories */}
       <div className="mx-auto max-w-[900px] space-y-9 px-5 py-10 sm:px-8 sm:py-12 lg:space-y-10">
-        {faqPageCategories.map((category, index) => (
+        {faqPageCategories.map((category) => (
           <section
             key={category.id}
             id={category.id}
             aria-labelledby={`${category.id}-heading`}
           >
-            {/* Category Heading */}
             <div className="mb-4">
               <div className="flex items-start gap-3">
                 <span className="mt-1 h-7 w-1 shrink-0 rounded-full bg-[#FF6B81]" />
@@ -59,7 +72,6 @@ export default function FAQPage() {
               </div>
             </div>
 
-            {/* Category Questions */}
             <FAQAccordion faqs={category.faqs} />
           </section>
         ))}

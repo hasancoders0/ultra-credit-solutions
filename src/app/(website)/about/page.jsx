@@ -1,3 +1,4 @@
+
 import Hero from "@/components/about/Hero";
 import WhoWeAre from "@/components/about/WhoWeAre";
 import Mission from "@/components/about/Mission";
@@ -9,9 +10,19 @@ import ImportantInfo from "@/components/about/ImportantInfo";
 import CTA from "@/components/about/CTA";
 
 export const metadata = {
-  title: "About Us | Ultra Credit Solutions Inc.",
+  title: "About Us | Ultra Credit Solutions USA",
   description:
-    "Learn about Ultra Credit Solutions Inc., our mission, our approach to credit-report concerns, and how to take the next step.",
+    "Learn about Ultra Credit Solutions USA, our mission, our approach to credit-report concerns, and the educational support we provide.",
+  alternates: {
+    canonical: "/about",
+  },
+  openGraph: {
+    title: "About Us | Ultra Credit Solutions USA",
+    description:
+      "Discover Ultra Credit Solutions USA, our mission, our values, and our approach to credit education and credit-report concerns.",
+    url: "/about",
+    type: "website",
+  },
 };
 
 export default function AboutPage() {

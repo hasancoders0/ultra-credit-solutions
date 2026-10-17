@@ -37,7 +37,7 @@ const locations = [
       { label: "Our Services", href: "/services" },
       { label: "Contact Us", href: "/contact" },
     ],
-    status: "published",
+    status: "draft",
     featured: true,
     order: 1,
     seo: {

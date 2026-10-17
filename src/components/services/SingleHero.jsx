@@ -1,82 +1,68 @@
+
 import Link from "next/link";
-import { ArrowRight, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+
+function stripHtml(value = "") {
+  return value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
 
 export default function SingleHero({ service }) {
+  if (!service) return null;
+
   return (
-    <section className="overflow-hidden bg-[#F9F9F9]">
-      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 sm:py-20 lg:py-24">
-        <div className="mb-10 flex flex-wrap items-center gap-2 text-sm text-[#888888]">
-          <Link href="/" className="transition hover:text-[#2852A0]">
+    <section className="bg-[#F9F9F9] px-5 py-12 sm:px-8 sm:py-16 lg:px-16 lg:py-20">
+      <div className="mx-auto max-w-[1200px]">
+        <nav
+          aria-label="Breadcrumb"
+          className="flex flex-wrap items-center gap-2 text-sm text-[#888888]"
+        >
+          <Link href="/" className="hover:text-[#2852A0]">
             Home
           </Link>
-
-          <ChevronRight size={15} />
-
-          <Link
-            href="/services"
-            className="transition hover:text-[#2852A0]"
-          >
+          <span aria-hidden="true">/</span>
+          <Link href="/services" className="hover:text-[#2852A0]">
             Services
           </Link>
+          <span aria-hidden="true">/</span>
+          <span className="font-medium text-[#2852A0]">
+            {service.title}
+          </span>
+        </nav>
 
-          <ChevronRight size={15} />
-
-          <span className="text-[#2852A0]">{service.title}</span>
-        </div>
-
-        <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+        <div className="mt-10 grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
           <div>
-            <span className="inline-flex rounded-full bg-[#2852A0]/10 px-4 py-2 text-sm font-semibold text-[#2852A0]">
-              Service Guide {service.number}
-            </span>
+            <Link
+              href="/services"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#2852A0] hover:underline"
+            >
+              <ArrowLeft size={16} />
+              All Services
+            </Link>
 
-            <h1 className="mt-5 text-4xl font-bold leading-tight tracking-tight text-[#081828] sm:text-5xl lg:text-6xl">
+            <h1 className="mt-6 text-3xl font-bold leading-tight tracking-tight text-[#081828] sm:text-4xl lg:text-5xl">
               {service.title}
             </h1>
 
-            <p className="mt-6 max-w-xl text-base leading-8 text-[#666666] sm:text-lg">
-              {service.description}
+            <p className="mt-5 text-base leading-8 text-[#667085]">
+              {stripHtml(service.description)}
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link
-                href="/appointment"
-                className="inline-flex items-center gap-2 rounded-lg bg-[#FF6B81] px-6 py-3.5 font-semibold text-white transition hover:bg-[#f45570]"
-              >
-                Make an Appointment
-                <ArrowRight size={18} />
-              </Link>
-
-              <Link
-                href="/contact"
-                className="inline-flex items-center justify-center rounded-lg border border-[#EEEEEE] bg-white px-6 py-3.5 font-semibold text-[#081828] transition hover:border-[#2852A0] hover:text-[#2852A0]"
-              >
-                Contact Us
-              </Link>
-            </div>
+            <Link
+              href="/appointment"
+              className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#2852A0] px-6 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#204483]"
+            >
+              Discuss Your Needs
+              <ArrowRight size={18} />
+            </Link>
           </div>
 
-          <div className="relative">
-            <div className="overflow-hidden rounded-2xl">
-              <img
-                src={service.image.src}
-                alt={service.image.alt}
-                className="h-[300px] w-full object-cover sm:h-[400px] lg:h-[460px]"
-                fetchPriority="high"
-              />
-            </div>
-
-            <div className="absolute -bottom-5 left-5 right-5 rounded-xl border border-[#EEEEEE] bg-white p-5 shadow-lg sm:left-8 sm:right-8">
-              <p className="text-sm font-semibold text-[#2852A0]">
-                ULTRA CREDIT SOLUTIONS
-              </p>
-
-              <p className="mt-2 text-sm leading-6 text-[#666666]">
-                Understand your credit information and explore the options
-                available for your circumstances.
-              </p>
-            </div>
-          </div>
+          {service.image?.src && (
+            <img
+              src={service.image.src}
+              alt={service.image.alt || service.title}
+              className="aspect-[5/4] w-full rounded-[24px] object-cover"
+            />
+          )}
         </div>
       </div>
     </section>

@@ -17,15 +17,33 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
+
 export const metadata = {
-  title: "SMS Terms & Conditions | Ultra Credit Solutions Inc.",
+  title: "SMS Terms & Conditions",
   description:
-    "Read the SMS messaging terms and conditions for Ultra Credit Solutions Inc., including consent, message frequency, fees, opt-out instructions, and support.",
+    "Review Ultra Credit Solutions USA's SMS messaging terms, including consent, message frequency, messaging fees, opt-out instructions, and support.",
+  alternates: {
+    canonical: "/sms-terms",
+  },
+  openGraph: {
+    title: "SMS Terms & Conditions | Ultra Credit Solutions USA",
+    description:
+      "Learn about SMS consent, message frequency, carrier fees, STOP and HELP instructions, and messaging support.",
+    url: "/sms-terms",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "SMS Terms & Conditions | Ultra Credit Solutions USA",
+    description:
+      "Review our SMS messaging terms, consent requirements, opt-out instructions, and support options.",
+  },
   robots: {
     index: true,
     follow: true,
   },
 };
+
 
 const sections = [
   {

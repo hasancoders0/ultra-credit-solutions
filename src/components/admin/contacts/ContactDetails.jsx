@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   X,
   Mail,
@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Clock3,
 } from "lucide-react";
+import { toast } from "sonner";
 import ContactReplyForm from "./ContactReplyForm";
 
 const statusStyles = {
@@ -16,6 +17,7 @@ const statusStyles = {
   Read: "bg-blue-50 text-[#2852A0]",
   "Reply Drafted": "bg-amber-50 text-amber-700",
   Replied: "bg-green-50 text-green-700",
+  Closed: "bg-gray-100 text-gray-600",
 };
 
 function formatDate(value) {
@@ -32,11 +34,13 @@ function formatDate(value) {
   }).format(date);
 }
 
-export default function ContactDetails({
-  contact,
-  onClose,
-  onStatusChange,
-}) {
+export default function ContactDetails({ contact, onClose, onStatusChange }) {
+  const [conversationContact, setConversationContact] = useState(contact);
+
+  useEffect(() => {
+    setConversationContact(contact);
+  }, [contact?.id]);
+
   useEffect(() => {
     if (!contact) return undefined;
 
@@ -55,26 +59,65 @@ export default function ContactDetails({
     };
   }, [contact, onClose]);
 
-  if (!contact) return null;
+  const handleReplySaved = useCallback(
+    async (result) => {
+      if (!result?.reply || !contact?.id) return;
 
-  const markAsRead = () => {
-    if (contact.status === "New") {
-      onStatusChange(contact.id, "Read");
-    }
+      const nextStatus =
+        result.deliveryStatus === "sent" ? "Replied" : "Reply Drafted";
+
+      setConversationContact((previous) => {
+        if (!previous || previous.id !== contact.id) return previous;
+
+        const existingReplies = previous.replies || [];
+        const alreadyAdded = existingReplies.some(
+          (item) => item.id === result.reply.id,
+        );
+
+        return {
+          ...previous,
+          status: nextStatus,
+          replies: alreadyAdded
+            ? existingReplies
+            : [...existingReplies, result.reply],
+        };
+      });
+
+      // Keep the parent contacts list synchronized and persist its status.
+      if (contact.status !== nextStatus) {
+        await onStatusChange(contact.id, nextStatus);
+      }
+    },
+    [contact, onStatusChange],
+  );
+
+  if (!contact || !conversationContact) return null;
+
+  const activeContact = conversationContact;
+
+  const markAsRead = async () => {
+    if (activeContact.status !== "New") return;
+
+    setConversationContact((previous) =>
+      previous ? { ...previous, status: "Read" } : previous,
+    );
+
+    await onStatusChange(activeContact.id, "Read");
   };
+
+  const replies = activeContact.replies || [];
 
   const conversation = [
     {
       id: "original-message",
-      message: contact.message,
-      createdAt: contact.createdAt,
+      message: activeContact.message,
+      createdAt: activeContact.createdAt,
       direction: "incoming",
       deliveryStatus: "received",
     },
-    ...(contact.replies || []),
+    ...replies,
   ].sort(
-    (a, b) =>
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
   );
 
   return (
@@ -119,7 +162,7 @@ export default function ContactDetails({
           <section>
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-base font-semibold text-[#2852A0]">
-                {contact.fullName
+                {(activeContact.fullName || "?")
                   .split(" ")
                   .filter(Boolean)
                   .slice(0, 2)
@@ -130,25 +173,25 @@ export default function ContactDetails({
 
               <div className="min-w-0 flex-1">
                 <h3 className="break-words text-base font-semibold text-[#081828]">
-                  {contact.fullName}
+                  {activeContact.fullName}
                 </h3>
 
                 <a
-                  href={`mailto:${contact.email}`}
+                  href={`mailto:${activeContact.email}`}
                   className="mt-1 inline-flex max-w-full items-center gap-1.5 break-all text-sm text-[#2852A0] hover:underline"
                 >
                   <Mail size={14} className="shrink-0" />
-                  {contact.email}
+                  {activeContact.email}
                 </a>
 
                 <div className="mt-3">
                   <span
                     className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-                      statusStyles[contact.status] ||
+                      statusStyles[activeContact.status] ||
                       "bg-gray-100 text-gray-600"
                     }`}
                   >
-                    {contact.status}
+                    {activeContact.status}
                   </span>
                 </div>
               </div>
@@ -160,7 +203,7 @@ export default function ContactDetails({
                 <div>
                   <p className="text-xs text-[#888888]">Contact name</p>
                   <p className="mt-1 break-words text-sm font-medium text-[#081828]">
-                    {contact.fullName}
+                    {activeContact.fullName}
                   </p>
                 </div>
               </div>
@@ -170,7 +213,7 @@ export default function ContactDetails({
                 <div>
                   <p className="text-xs text-[#888888]">Received</p>
                   <p className="mt-1 text-sm font-medium text-[#081828]">
-                    {formatDate(contact.createdAt)}
+                    {formatDate(activeContact.createdAt)}
                   </p>
                 </div>
               </div>
@@ -183,9 +226,9 @@ export default function ContactDetails({
                 <MessageSquare size={17} />
                 Conversation
               </h3>
+
               <span className="text-xs text-[#888888]">
-                {(contact.replies || []).length}{" "}
-                {(contact.replies || []).length === 1 ? "reply" : "replies"}
+                {replies.length} {replies.length === 1 ? "reply" : "replies"}
               </span>
             </div>
 
@@ -196,7 +239,9 @@ export default function ContactDetails({
                 return (
                   <div
                     key={item.id}
-                    className={`flex ${isOutgoing ? "justify-end" : "justify-start"}`}
+                    className={`flex ${
+                      isOutgoing ? "justify-end" : "justify-start"
+                    }`}
                   >
                     <div
                       className={`w-full max-w-[92%] rounded-xl border p-4 ${
@@ -207,8 +252,9 @@ export default function ContactDetails({
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-xs font-semibold text-[#081828]">
-                          {isOutgoing ? "Admin Reply" : contact.fullName}
+                          {isOutgoing ? "Admin Reply" : activeContact.fullName}
                         </p>
+
                         <span className="text-[11px] text-[#888888]">
                           {formatDate(item.createdAt)}
                         </span>
@@ -226,7 +272,7 @@ export default function ContactDetails({
                             </span>
                           ) : (
                             <span className="text-xs font-medium text-amber-700">
-                              Not sent by email
+                              Saved — not emailed
                             </span>
                           )}
                         </div>
@@ -238,7 +284,7 @@ export default function ContactDetails({
             </div>
           </section>
 
-          {contact.status === "New" && (
+          {activeContact.status === "New" && (
             <button
               type="button"
               onClick={markAsRead}
@@ -249,7 +295,10 @@ export default function ContactDetails({
             </button>
           )}
 
-          <ContactReplyForm contact={contact} />
+          <ContactReplyForm
+            contact={activeContact}
+            onReplySaved={handleReplySaved}
+          />
         </div>
 
         <div className="shrink-0 border-t border-[#EEEEEE] bg-white px-5 py-4 sm:px-6">

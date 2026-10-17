@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -8,81 +9,136 @@ import LocationStats from "@/components/admin/locations/LocationStats";
 import LocationToolbar from "@/components/admin/locations/LocationToolbar";
 import LocationTable from "@/components/admin/locations/LocationTable";
 import LocationDeleteDialog from "@/components/admin/locations/LocationDeleteDialog";
+import DataPagination from "@/components/admin/shared/DataPagination";
 
 import {
   deleteAdminLocation,
   getAdminLocations,
-  saveAdminLocations,
-  LOCATION_STORAGE_KEY,
+  saveAdminLocation,
   LOCATION_UPDATED_EVENT,
 } from "@/lib/admin-locations";
 
-const PAGE_SIZES = [10, 20, 50, 100];
+const PAGE_SIZES = [10, 20, 50];
 
 export default function LocationsPage() {
   const router = useRouter();
+
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("order");
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [deletingLocation, setDeletingLocation] = useState(null);
 
-  const refreshLocations = useCallback(() => {
-    setLocations(getAdminLocations());
-    setLoading(false);
+  const [deletingLocation, setDeletingLocation] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const refreshLocations = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+
+    try {
+      const data = await getAdminLocations();
+      setLocations(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Failed to load locations:", error);
+      setLoadError("Could not load locations. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     refreshLocations();
+  }, [refreshLocations]);
 
-    const onStorage = (event) => {
-      if (event.key === LOCATION_STORAGE_KEY) refreshLocations();
+  useEffect(() => {
+    const handleLocationUpdate = () => {
+      refreshLocations();
     };
 
-    window.addEventListener("storage", onStorage);
-    window.addEventListener(LOCATION_UPDATED_EVENT, refreshLocations);
+    window.addEventListener(LOCATION_UPDATED_EVENT, handleLocationUpdate);
 
     return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener(LOCATION_UPDATED_EVENT, refreshLocations);
+      window.removeEventListener(
+        LOCATION_UPDATED_EVENT,
+        handleLocationUpdate,
+      );
     };
   }, [refreshLocations]);
 
   const stats = useMemo(
     () => ({
       total: locations.length,
-      published: locations.filter((item) => item.status === "published").length,
-      draft: locations.filter((item) => item.status === "draft").length,
+      published: locations.filter(
+        (location) => location.status === "published",
+      ).length,
+      drafts: locations.filter(
+        (location) => location.status === "draft",
+      ).length,
+      featured: locations.filter(
+        (location) => Boolean(location.featured),
+      ).length,
     }),
-    [locations]
+    [locations],
   );
 
   const filteredLocations = useMemo(() => {
     const query = search.trim().toLowerCase();
 
     return locations
-      .filter((item) => {
+      .filter((location) => {
+        const searchableFields = [
+          location.title,
+          location.slug,
+          location.city,
+          location.state,
+        ];
+
         const matchesSearch =
           !query ||
-          item.title.toLowerCase().includes(query) ||
-          item.slug.toLowerCase().includes(query) ||
-          item.city.toLowerCase().includes(query) ||
-          item.state.toLowerCase().includes(query);
+          searchableFields.some((field) =>
+            String(field || "").toLowerCase().includes(query),
+          );
 
-        return (
-          matchesSearch &&
-          (statusFilter === "all" || item.status === statusFilter)
-        );
+        const matchesStatus =
+          statusFilter === "all" ||
+          location.status === statusFilter;
+
+        return matchesSearch && matchesStatus;
       })
       .sort((a, b) => {
-        if (sortBy === "title") return a.title.localeCompare(b.title);
-        if (sortBy === "updated") {
-          return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
+        switch (sortBy) {
+          case "title":
+            return String(a.title || "").localeCompare(
+              String(b.title || ""),
+            );
+
+          case "updated":
+            return (
+              new Date(b.updatedAt || 0).getTime() -
+              new Date(a.updatedAt || 0).getTime()
+            );
+
+          case "state":
+            return String(a.state || "").localeCompare(
+              String(b.state || ""),
+            );
+
+          case "city":
+            return String(a.city || "").localeCompare(
+              String(b.city || ""),
+            );
+
+          case "order":
+          default:
+            return (Number(a.order) || 0) - (Number(b.order) || 0);
         }
-        return a.order - b.order;
       });
   }, [locations, search, statusFilter, sortBy]);
 
@@ -92,74 +148,110 @@ export default function LocationsPage() {
 
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredLocations.length / pageSize)
-  );
-  const safePage = Math.min(currentPage, totalPages);
-  const paginatedLocations = filteredLocations.slice(
-    (safePage - 1) * pageSize,
-    safePage * pageSize
+    Math.ceil(filteredLocations.length / pageSize),
   );
 
-  function togglePublish(location) {
-    const status =
+  const safePage = Math.min(currentPage, totalPages);
+
+  useEffect(() => {
+    if (currentPage !== safePage) {
+      setCurrentPage(safePage);
+    }
+  }, [currentPage, safePage]);
+
+  const startIndex = (safePage - 1) * pageSize;
+
+  const paginatedLocations = filteredLocations.slice(
+    startIndex,
+    startIndex + pageSize,
+  );
+
+  const startRecord = filteredLocations.length > 0 ? startIndex + 1 : 0;
+
+  const endRecord = Math.min(
+    startIndex + pageSize,
+    filteredLocations.length,
+  );
+
+  const togglePublish = async (location) => {
+    if (updatingId !== null) return;
+
+    const nextStatus =
       location.status === "published" ? "draft" : "published";
 
-    if (status === "published" && !location.introduction?.trim()) {
+    if (
+      nextStatus === "published" &&
+      !String(location.introduction || "").trim()
+    ) {
       toast.error("Add a location introduction before publishing.");
       router.push(`/admin/locations/${location.id}`);
       return;
     }
 
+    setUpdatingId(String(location.id));
+
     try {
-      const next = locations.map((item) =>
-        String(item.id) === String(location.id)
-          ? { ...item, status, updatedAt: new Date().toISOString() }
-          : item
+      const updatedLocation = await saveAdminLocation({
+        ...location,
+        status: nextStatus,
+        updatedAt: new Date().toISOString(),
+      });
+
+      setLocations((previous) =>
+        previous.map((item) =>
+          String(item.id) === String(location.id)
+            ? { ...item, ...updatedLocation }
+            : item,
+        ),
       );
 
-      saveAdminLocations(next);
-      setLocations(next);
       toast.success(
-        status === "published" ? "Location published." : "Location moved to draft."
+        nextStatus === "published"
+          ? "Location published."
+          : "Location moved to draft.",
       );
-    } catch {
-      toast.error("Could not update location.");
-    }
-  }
+    } catch (error) {
+      console.error("Failed to update location:", error);
 
-  function confirmDelete() {
-    if (!deletingLocation) return;
+      toast.error(
+        error?.message || "Could not update location. Please try again.",
+      );
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingLocation || deleting) return;
+
+    setDeleting(true);
 
     try {
-      setLocations(deleteAdminLocation(deletingLocation.id));
-      setDeletingLocation(null);
-      toast.success("Location deleted.");
-    } catch {
-      toast.error("Could not delete location.");
-    }
-  }
+      await deleteAdminLocation(deletingLocation.id);
 
-  const from = filteredLocations.length
-    ? (safePage - 1) * pageSize + 1
-    : 0;
-  const to = Math.min(safePage * pageSize, filteredLocations.length);
+      setLocations((previous) =>
+        previous.filter(
+          (location) =>
+            String(location.id) !== String(deletingLocation.id),
+        ),
+      );
+
+      setDeletingLocation(null);
+
+      toast.success("Location deleted.");
+    } catch (error) {
+      console.error("Failed to delete location:", error);
+
+      toast.error(
+        error?.message || "Could not delete location. Please try again.",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-2 text-xs text-[#888888]">
-          <a href="/admin" className="hover:text-[#2852A0]">Dashboard</a>
-          <span>/</span>
-          <span className="text-[#555555]">Locations</span>
-        </div>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#081828]">
-          Locations
-        </h1>
-        <p className="mt-1 text-sm text-[#888888]">
-          Manage location pages, content, featured images and SEO metadata.
-        </p>
-      </div>
-
       <LocationStats stats={stats} />
 
       <section className="overflow-hidden rounded-xl border border-[#EEEEEE] bg-white">
@@ -176,63 +268,54 @@ export default function LocationsPage() {
         />
 
         {loading ? (
-          <div className="px-5 py-16 text-center text-sm text-[#888888]">
+          <div
+            className="px-5 py-16 text-center text-sm text-[#888888]"
+            role="status"
+          >
             Loading locations...
           </div>
-        ) : (
-          <LocationTable
-            locations={paginatedLocations}
-            onTogglePublish={togglePublish}
-            onDelete={setDeletingLocation}
-          />
-        )}
+        ) : loadError ? (
+          <div className="flex flex-col items-center gap-3 px-5 py-16 text-center">
+            <p className="text-sm text-red-600">{loadError}</p>
 
-        {!loading && (
-          <div className="flex flex-col gap-3 border-t border-[#EEEEEE] px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-[#888888]">
-              <label htmlFor="location-page-size">Show</label>
-              <select
-                id="location-page-size"
-                value={pageSize}
-                onChange={(event) => setPageSize(Number(event.target.value))}
-                className="h-9 rounded-lg border border-[#EEEEEE] bg-white px-2 text-sm"
-              >
-                {PAGE_SIZES.map((size) => (
-                  <option key={size} value={size}>{size}</option>
-                ))}
-              </select>
-              <span>per page</span>
-              <span>Showing {from}–{to} of {filteredLocations.length}</span>
-            </div>
-
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                disabled={safePage === 1}
-                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                className="h-9 rounded-lg border border-[#EEEEEE] px-3 text-sm disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-[#555555]">
-                Page {safePage} of {totalPages}
-              </span>
-              <button
-                type="button"
-                disabled={safePage === totalPages}
-                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                className="h-9 rounded-lg border border-[#EEEEEE] px-3 text-sm disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={refreshLocations}
+              className="rounded-lg border border-[#EEEEEE] px-4 py-2 text-sm font-medium text-[#081828] transition hover:bg-[#F9F9F9]"
+            >
+              Try again
+            </button>
           </div>
+        ) : (
+          <>
+            <LocationTable
+              locations={paginatedLocations}
+              onTogglePublish={togglePublish}
+              onDelete={setDeletingLocation}
+            />
+
+            <DataPagination
+              currentPage={safePage}
+              totalPages={totalPages}
+              totalRecords={filteredLocations.length}
+              startRecord={startRecord}
+              endRecord={endRecord}
+              onPageChange={setCurrentPage}
+              itemLabel="locations"
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+            />
+          </>
         )}
       </section>
 
       <LocationDeleteDialog
         location={deletingLocation}
-        onCancel={() => setDeletingLocation(null)}
+        onCancel={() => {
+          if (!deleting) {
+            setDeletingLocation(null);
+          }
+        }}
         onConfirm={confirmDelete}
       />
     </div>

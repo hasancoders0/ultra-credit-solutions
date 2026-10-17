@@ -4,6 +4,8 @@ import { useState } from "react";
 import {
   ArrowRight,
   LoaderCircle,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
 const services = [
@@ -24,7 +26,10 @@ const initialForm = {
 export default function AppointmentForm() {
   const [form, setForm] = useState(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
+  const [feedback, setFeedback] = useState({
+    type: "",
+    message: "",
+  });
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -33,31 +38,67 @@ export default function AppointmentForm() {
       ...previous,
       [name]: value,
     }));
+
+    if (feedback.message) {
+      setFeedback({ type: "", message: "" });
+    }
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    setMessage("");
+    if (isSubmitting) return;
+
     setIsSubmitting(true);
+    setFeedback({ type: "", message: "" });
 
     try {
-      // TODO: Connect the form to the lead API.
-      // The form does not save submissions yet.
+      const response = await fetch("/api/appointments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName: form.fullName,
+          email: form.email,
+          service: form.service,
+          concerns: form.concerns,
+        }),
+      });
 
-      setMessage(
-        "Appointment requests are not connected yet. Please contact our team directly."
-      );
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ||
+            "We couldn't submit your request. Please try again.",
+        );
+      }
+
+      setFeedback({
+        type: "success",
+        message:
+          result.message ||
+          "Your appointment request has been submitted successfully. Our team will follow up with you.",
+      });
+
+      setForm(initialForm);
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message:
+          error.message ||
+          "Something went wrong. Please check your connection and try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
   }
 
   const inputClass =
-    "mt-2 w-full rounded-lg border border-[#E2E7EF] bg-white px-4 text-sm text-[#081828] outline-none transition placeholder:text-[#A0A8B5] focus:border-[#2852A0] focus:ring-2 focus:ring-[#2852A0]/10";
+    "mt-2 w-full rounded-lg border border-[#E2E7EF] bg-white px-4 text-sm text-[#081828] outline-none transition placeholder:text-[#A0A8B5] focus:border-[#2852A0] focus:ring-2 focus:ring-[#2852A0]/10 disabled:cursor-not-allowed disabled:bg-gray-50";
 
-  const labelClass =
-    "block text-sm font-semibold text-[#081828]";
+  const labelClass = "block text-sm font-semibold text-[#081828]";
 
   return (
     <div className="relative mx-auto w-full max-w-[560px]">
@@ -82,16 +123,15 @@ export default function AppointmentForm() {
           <h2
             className="text-2xl font-bold leading-tight tracking-[-0.035em] text-[#081828] sm:text-3xl"
             style={{
-              fontFamily:
-                "var(--font-plus-jakarta), Arial, sans-serif",
+              fontFamily: "var(--font-plus-jakarta), Arial, sans-serif",
             }}
           >
             Get an Appointment
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-[#667085]">
-            Tell us about your needs. Our team can help you
-            understand the available options.
+            Tell us about your needs. Our team can help you understand the
+            available options.
           </p>
         </div>
 
@@ -99,10 +139,7 @@ export default function AppointmentForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Full Name */}
           <div>
-            <label
-              htmlFor="appointment-name"
-              className={labelClass}
-            >
+            <label htmlFor="appointment-name" className={labelClass}>
               Full Name <span className="text-[#FF6B81]">*</span>
             </label>
 
@@ -116,18 +153,15 @@ export default function AppointmentForm() {
               placeholder="Enter your full name"
               maxLength={120}
               required
+              disabled={isSubmitting}
               className={`${inputClass} h-12`}
             />
           </div>
 
           {/* Email */}
           <div>
-            <label
-              htmlFor="appointment-email"
-              className={labelClass}
-            >
-              Email Address{" "}
-              <span className="text-[#FF6B81]">*</span>
+            <label htmlFor="appointment-email" className={labelClass}>
+              Email Address <span className="text-[#FF6B81]">*</span>
             </label>
 
             <input
@@ -140,16 +174,14 @@ export default function AppointmentForm() {
               placeholder="you@example.com"
               maxLength={254}
               required
+              disabled={isSubmitting}
               className={`${inputClass} h-12`}
             />
           </div>
 
           {/* Service */}
           <div>
-            <label
-              htmlFor="appointment-service"
-              className={labelClass}
-            >
+            <label htmlFor="appointment-service" className={labelClass}>
               What Can We Help You With?{" "}
               <span className="text-[#FF6B81]">*</span>
             </label>
@@ -160,6 +192,7 @@ export default function AppointmentForm() {
               value={form.service}
               onChange={handleChange}
               required
+              disabled={isSubmitting}
               className={`${inputClass} h-12`}
             >
               <option value="" disabled>
@@ -176,10 +209,7 @@ export default function AppointmentForm() {
 
           {/* Concerns */}
           <div>
-            <label
-              htmlFor="appointment-concerns"
-              className={labelClass}
-            >
+            <label htmlFor="appointment-concerns" className={labelClass}>
               Tell Us About Your Concerns
             </label>
 
@@ -191,9 +221,31 @@ export default function AppointmentForm() {
               placeholder="Briefly describe your concerns..."
               rows={3}
               maxLength={2000}
+              disabled={isSubmitting}
               className={`${inputClass} resize-y py-3 leading-6`}
             />
           </div>
+
+          {/* Submission Feedback */}
+          {feedback.message && (
+            <div
+              role={feedback.type === "error" ? "alert" : "status"}
+              aria-live="polite"
+              className={`flex items-start gap-2 rounded-lg border p-3 text-sm leading-6 ${
+                feedback.type === "success"
+                  ? "border-green-200 bg-green-50 text-green-800"
+                  : "border-red-200 bg-red-50 text-red-800"
+              }`}
+            >
+              {feedback.type === "success" ? (
+                <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
+              ) : (
+                <AlertCircle size={18} className="mt-0.5 shrink-0" />
+              )}
+
+              <p>{feedback.message}</p>
+            </div>
+          )}
 
           {/* Submit */}
           <button
@@ -203,16 +255,12 @@ export default function AppointmentForm() {
           >
             {isSubmitting ? (
               <>
-                <LoaderCircle
-                  size={18}
-                  className="animate-spin"
-                />
-                Please wait...
+                <LoaderCircle size={18} className="animate-spin" />
+                Submitting Request...
               </>
             ) : (
               <>
                 Request an Appointment
-
                 <ArrowRight
                   size={17}
                   className="transition-transform duration-300 group-hover:translate-x-1"
@@ -221,20 +269,10 @@ export default function AppointmentForm() {
             )}
           </button>
 
-          {/* Submission Message */}
-          {message && (
-            <p
-              role="status"
-              className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800"
-            >
-              {message}
-            </p>
-          )}
-
           {/* Privacy Note */}
           <p className="text-center text-[11px] leading-5 text-[#7B8494]">
-            Your information should be handled securely. Submitting
-            an inquiry does not guarantee a particular credit outcome.
+            Your information should be handled securely. Submitting an inquiry
+            does not guarantee a particular credit outcome.
           </p>
         </form>
       </div>

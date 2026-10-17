@@ -1,10 +1,27 @@
 import Link from "next/link";
 import { ArrowRight, Mail, MapPin, ShieldCheck } from "lucide-react";
 
+
 export const metadata = {
-  title: "Privacy Policy | Ultra Credit Solutions Inc.",
+  title: "Privacy Policy",
   description:
-    "Read the Privacy Policy of Ultra Credit Solutions Inc. to learn how information may be collected, used, and protected when you visit our website.",
+    "Read the Ultra Credit Solutions privacy policy to understand how personal information may be collected, used, disclosed, and protected when you visit our website.",
+  alternates: {
+    canonical: "/privacy-policy",
+  },
+  openGraph: {
+    title: "Privacy Policy | Ultra Credit Solutions USA",
+    description:
+      "Learn how Ultra Credit Solutions handles personal information and explains its website privacy practices.",
+    url: "/privacy-policy",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Privacy Policy | Ultra Credit Solutions USA",
+    description:
+      "Review our website privacy practices and learn how personal information may be handled.",
+  },
 };
 
 const personalData = [

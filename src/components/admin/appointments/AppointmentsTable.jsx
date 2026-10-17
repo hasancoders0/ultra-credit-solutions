@@ -9,7 +9,21 @@ const statusStyles = {
   Closed: "bg-green-50 text-green-700",
 };
 
+function normalizeStatus(status) {
+  const statusMap = {
+    pending: "New",
+    new: "New",
+    reviewed: "Reviewed",
+    contacted: "Contacted",
+    closed: "Closed",
+  };
+
+  return statusMap[String(status || "").toLowerCase()] || "New";
+}
+
 function formatDate(value) {
+  if (!value) return "—";
+
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) return "—";
@@ -22,8 +36,9 @@ function formatDate(value) {
 }
 
 function getInitials(name = "") {
-  return name
-    .split(" ")
+  return String(name)
+    .trim()
+    .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0])
@@ -31,7 +46,7 @@ function getInitials(name = "") {
     .toUpperCase();
 }
 
-export default function AppointmentsTable({ appointments, onView }) {
+export default function AppointmentsTable({ appointments = [], onView }) {
   return (
     <div className="w-full overflow-x-auto">
       <table className="w-full min-w-[850px] border-collapse text-left">
@@ -45,8 +60,9 @@ export default function AppointmentsTable({ appointments, onView }) {
                 >
                   {heading}
                 </th>
-              )
+              ),
             )}
+
             <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-[#888888]">
               ACTION
             </th>
@@ -55,83 +71,97 @@ export default function AppointmentsTable({ appointments, onView }) {
 
         <tbody className="divide-y divide-[#EEEEEE]">
           {appointments.length > 0 ? (
-            appointments.map((appointment) => (
-              <tr
-                key={appointment.id}
-                className="transition hover:bg-[#FAFBFD]"
-              >
-                <td className="px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-[#2852A0]">
-                      {getInitials(appointment.fullName)}
+            appointments.map((appointment) => {
+              const status = normalizeStatus(appointment.status);
+              const name = appointment.fullName || "Unknown customer";
+
+              return (
+                <tr
+                  key={appointment.id}
+                  className="transition hover:bg-[#FAFBFD]"
+                >
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-[#2852A0]">
+                        {getInitials(name)}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[#081828]">
+                          {name}
+                        </p>
+
+                        <a
+                          href={`mailto:${appointment.email || ""}`}
+                          className="mt-1 flex items-center gap-1.5 text-xs text-[#888888] hover:text-[#2852A0]"
+                        >
+                          <Mail size={13} className="shrink-0" />
+                          <span className="truncate">
+                            {appointment.email || "No email provided"}
+                          </span>
+                        </a>
+                      </div>
                     </div>
+                  </td>
 
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[#081828]">
-                        {appointment.fullName}
-                      </p>
-                      <a
-                        href={`mailto:${appointment.email}`}
-                        className="mt-1 flex items-center gap-1.5 text-xs text-[#888888] hover:text-[#2852A0]"
-                      >
-                        <Mail size={13} className="shrink-0" />
-                        <span className="truncate">{appointment.email}</span>
-                      </a>
-                    </div>
-                  </div>
-                </td>
+                  <td className="px-5 py-4">
+                    <p className="max-w-[260px] text-sm font-medium text-[#081828]">
+                      {appointment.service || "Other"}
+                    </p>
 
-                <td className="px-5 py-4">
-                  <p className="max-w-[260px] text-sm font-medium text-[#081828]">
-                    {appointment.service}
-                  </p>
-                  <p className="mt-1 line-clamp-1 max-w-[260px] text-xs text-[#888888]">
-                    {appointment.concerns || "No additional details provided"}
-                  </p>
-                </td>
+                    <p className="mt-1 line-clamp-1 max-w-[260px] text-xs text-[#888888]">
+                      {appointment.concerns || "No additional details provided"}
+                    </p>
+                  </td>
 
-                <td className="whitespace-nowrap px-5 py-4">
-                  <span className="inline-flex items-center gap-1.5 text-sm text-[#666666]">
-                    <CalendarDays size={14} className="text-[#999999]" />
-                    {formatDate(appointment.submittedAt)}
-                  </span>
-                </td>
+                  <td className="whitespace-nowrap px-5 py-4">
+                    <span className="inline-flex items-center gap-1.5 text-sm text-[#666666]">
+                      <CalendarDays size={14} className="text-[#999999]" />
 
-                <td className="px-5 py-4">
-                  <span
-                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-                      statusStyles[appointment.status] ||
-                      "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {appointment.status}
-                  </span>
-                </td>
+                      {formatDate(
+                        appointment.submittedAt || appointment.createdAt,
+                      )}
+                    </span>
+                  </td>
 
-                <td className="px-5 py-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => onView(appointment)}
-                    aria-label={`View request from ${appointment.fullName}`}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#EEEEEE] bg-white px-3 text-sm font-medium text-[#2852A0] transition hover:border-[#2852A0] hover:bg-blue-50"
-                  >
-                    <Eye size={15} />
-                    View
-                  </button>
-                </td>
-              </tr>
-            ))
+                  <td className="px-5 py-4">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                        statusStyles[status] || "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {status}
+                    </span>
+                  </td>
+
+                  <td className="px-5 py-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => onView?.(appointment)}
+                      aria-label={`View request from ${name}`}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#EEEEEE] bg-white px-3 text-sm font-medium text-[#2852A0] transition hover:border-[#2852A0] hover:bg-blue-50"
+                    >
+                      <Eye size={15} />
+                      View
+                    </button>
+                  </td>
+                </tr>
+              );
+            })
           ) : (
             <tr>
               <td colSpan={5} className="px-5 py-16 text-center">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
                   <CalendarDays size={22} className="text-[#888888]" />
                 </div>
+
                 <p className="mt-3 text-sm font-semibold text-[#081828]">
                   No appointment requests found
                 </p>
+
                 <p className="mt-1 text-sm text-[#888888]">
-                  Try changing your search or filters.
+                  New website submissions will appear here when the appointments
+                  API is connected.
                 </p>
               </td>
             </tr>

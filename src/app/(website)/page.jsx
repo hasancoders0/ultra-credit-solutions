@@ -1,5 +1,3 @@
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/home/HeroSection";
 import AboutSection from "@/components/home/AboutSection";
 import TrustSection from "@/components/home/TrustSection";
@@ -11,8 +9,6 @@ import FAQSection from "@/components/home/FAQSection";
 export default function HomePage() {
   return (
     <>
-      <Header />
-
       <main className="flex-1">
         {/* 1. Hero Section */}
         <HeroSection />
@@ -35,8 +31,6 @@ export default function HomePage() {
         {/* 7. Frequently Asked Questions */}
         <FAQSection />
       </main>
-
-      <Footer />
     </>
   );
 }
