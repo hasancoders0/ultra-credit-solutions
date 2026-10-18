@@ -1,12 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import {
-  ArrowRight,
-  LoaderCircle,
-  CheckCircle2,
-  AlertCircle,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, LoaderCircle, AlertCircle } from "lucide-react";
 
 const services = [
   "Credit Report Review",
@@ -24,6 +20,8 @@ const initialForm = {
 };
 
 export default function AppointmentForm() {
+  const router = useRouter();
+
   const [form, setForm] = useState(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState({
@@ -49,6 +47,17 @@ export default function AppointmentForm() {
 
     if (isSubmitting) return;
 
+    const fullName = form.fullName.trim();
+    const email = form.email.trim();
+
+    if (!fullName || !email || !form.service) {
+      setFeedback({
+        type: "error",
+        message: "Please complete all required fields.",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setFeedback({ type: "", message: "" });
 
@@ -59,10 +68,10 @@ export default function AppointmentForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          fullName: form.fullName,
-          email: form.email,
+          fullName,
+          email,
           service: form.service,
-          concerns: form.concerns,
+          concerns: form.concerns.trim(),
         }),
       });
 
@@ -75,14 +84,13 @@ export default function AppointmentForm() {
         );
       }
 
-      setFeedback({
-        type: "success",
-        message:
-          result.message ||
-          "Your appointment request has been submitted successfully. Our team will follow up with you.",
+      // Redirect only after the API confirms success.
+      const params = new URLSearchParams({
+        name: fullName,
+        email,
       });
 
-      setForm(initialForm);
+      router.push(`/thank-you?${params.toString()}`);
     } catch (error) {
       setFeedback({
         type: "error",
@@ -90,7 +98,7 @@ export default function AppointmentForm() {
           error.message ||
           "Something went wrong. Please check your connection and try again.",
       });
-    } finally {
+
       setIsSubmitting(false);
     }
   }
@@ -226,23 +234,14 @@ export default function AppointmentForm() {
             />
           </div>
 
-          {/* Submission Feedback */}
+          {/* Submission Error */}
           {feedback.message && (
             <div
-              role={feedback.type === "error" ? "alert" : "status"}
+              role="alert"
               aria-live="polite"
-              className={`flex items-start gap-2 rounded-lg border p-3 text-sm leading-6 ${
-                feedback.type === "success"
-                  ? "border-green-200 bg-green-50 text-green-800"
-                  : "border-red-200 bg-red-50 text-red-800"
-              }`}
+              className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm leading-6 text-red-800"
             >
-              {feedback.type === "success" ? (
-                <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
-              ) : (
-                <AlertCircle size={18} className="mt-0.5 shrink-0" />
-              )}
-
+              <AlertCircle size={18} className="mt-0.5 shrink-0" />
               <p>{feedback.message}</p>
             </div>
           )}

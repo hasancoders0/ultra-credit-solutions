@@ -1,7 +1,7 @@
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
-
+import NavigationLoader from "@/components/layout/NavigationLoader";
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -36,6 +36,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${plusJakartaSans.variable}`}>
       <body className="min-h-screen flex flex-col font-sans antialiased">
+        <NavigationLoader />
         {children}
 
         <Toaster position="top-right" richColors closeButton duration={4000} />
