@@ -1,4 +1,3 @@
-
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import IntegrationLoader from "@/components/integrations/IntegrationLoader";
@@ -10,6 +9,14 @@ export const metadata = {
   },
   description:
     "Explore credit solutions, services, educational resources, and support options from Ultra Credit Solutions USA.",
+  icons: {
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/favicon.ico", type: "image/x-icon" },
+    ],
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
   robots: {
     index: true,
     follow: true,
@@ -26,9 +33,7 @@ export default function WebsiteLayout({ children }) {
     <>
       <Header />
 
-      <main className="flex-1">
-        {children}
-      </main>
+      <main className="flex-1">{children}</main>
 
       <Footer />
 
