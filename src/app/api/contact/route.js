@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ObjectId } from "mongodb";
@@ -7,6 +8,7 @@ import {
   ADMIN_COOKIE_NAME,
   verifyAdminSession,
 } from "@/lib/admin-session";
+import { notifyContactSubmission } from "@/lib/email-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,7 +82,6 @@ async function requireAdmin() {
 
 /**
  * GET /api/contact
- *
  * Admin-only endpoint.
  * Returns saved contact submissions from MongoDB.
  */
@@ -113,9 +114,8 @@ export async function GET() {
 
 /**
  * POST /api/contact
- *
  * Public endpoint.
- * Saves a new contact form submission to MongoDB.
+ * Saves a new contact form submission and sends an optional email notification.
  */
 export async function POST(request) {
   try {
@@ -142,8 +142,13 @@ export async function POST(request) {
       return jsonError("Please enter a valid email address.");
     }
 
-    if (message.length < 10 || message.length > MAX_MESSAGE_LENGTH) {
-      return jsonError("Your message must contain between 10 and 3000 characters.");
+    if (
+      message.length < 10 ||
+      message.length > MAX_MESSAGE_LENGTH
+    ) {
+      return jsonError(
+        "Your message must contain between 10 and 3000 characters."
+      );
     }
 
     const now = new Date();
@@ -164,13 +169,26 @@ export async function POST(request) {
       .collection(COLLECTION_NAME)
       .insertOne(newContact);
 
+    // Email notification must never invalidate a saved contact submission.
+    try {
+      await notifyContactSubmission({
+        ...newContact,
+        id: result.insertedId.toString(),
+      });
+    } catch (notificationError) {
+      console.error(
+        "Contact notification failed:",
+        notificationError
+      );
+    }
+
     return NextResponse.json(
       {
         success: true,
         message: "Your message has been submitted successfully.",
         contactId: result.insertedId.toString(),
       },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error) {
     console.error("POST /api/contact error:", error);
@@ -181,22 +199,15 @@ export async function POST(request) {
 
     return jsonError(
       "Unable to submit your message. Please try again.",
-      500,
+      500
     );
   }
 }
 
 /**
  * PATCH /api/contact
- *
  * Admin-only endpoint.
  * Updates a contact's status.
- *
- * Body:
- * {
- *   "id": "MongoDB document ID",
- *   "status": "Read"
- * }
  */
 export async function PATCH(request) {
   try {
@@ -228,7 +239,7 @@ export async function PATCH(request) {
           status,
           updatedAt: new Date(),
         },
-      },
+      }
     );
 
     if (result.matchedCount === 0) {

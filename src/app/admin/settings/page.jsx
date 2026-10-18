@@ -1,60 +1,68 @@
-
 "use client";
 
 import { useState } from "react";
-import {
-  Settings2,
-  UserRound,
-  Plug,
-} from "lucide-react";
+import { UserRound, Plug, Mail } from "lucide-react";
 
 import SettingsTabs from "@/components/admin/settings/SettingsTabs";
 import AccountSettings from "@/components/admin/settings/AccountSettings";
 import IntegrationsSettings from "@/components/admin/settings/IntegrationsSettings";
+import EmailNotificationsSettings from "@/components/admin/settings/EmailNotificationsSettings";
+
+const tabs = [
+  {
+    id: "account",
+    label: "User Account",
+    icon: UserRound,
+  },
+  {
+    id: "integrations",
+    label: "Marketing Integrations",
+    icon: Plug,
+  },
+  {
+    id: "email",
+    label: "Email Notifications",
+    icon: Mail,
+  },
+];
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("integrations");
+  const [activeTab, setActiveTab] = useState("account");
+
+  const renderActiveTab = () => {
+    switch (activeTab) {
+      case "account":
+        return <AccountSettings />;
+
+      case "integrations":
+        return <IntegrationsSettings />;
+
+      case "email":
+        return <EmailNotificationsSettings />;
+
+      default:
+        return <AccountSettings />;
+    }
+  };
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] space-y-6">
+    <div className="w-full min-w-0 space-y-6">
+      {/* Page Header */}
       <div>
-        <div className="flex items-center gap-2 text-sm text-[#888888]">
-          <Settings2 size={16} />
-          <span>Admin</span>
-          <span>/</span>
-          <span className="text-[#2852A0]">Settings</span>
-        </div>
-
-        <h1 className="mt-3 text-2xl font-bold tracking-tight text-[#081828] sm:text-3xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
           Settings
         </h1>
 
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#777777]">
-          Manage your admin account and configure marketing integrations
-          from one place.
+        <p className="mt-1 text-sm text-slate-500">
+          Manage your account, marketing integrations, and email notifications.
         </p>
       </div>
 
-      <SettingsTabs
-        activeTab={activeTab}
-        onChange={setActiveTab}
-        tabs={[
-          {
-            id: "account",
-            label: "User Account",
-            icon: UserRound,
-          },
-          {
-            id: "integrations",
-            label: "Marketing Integrations",
-            icon: Plug,
-          },
-        ]}
-      />
+      {/* Settings Navigation */}
+      <SettingsTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-      {activeTab === "account" && <AccountSettings />}
-
-      {activeTab === "integrations" && <IntegrationsSettings />}
+      {/* Active Settings Content */}
+      <div className="min-w-0">{renderActiveTab()}</div>
     </div>
   );
 }

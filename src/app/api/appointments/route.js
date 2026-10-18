@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ObjectId } from "mongodb";
+
 import { getDb } from "@/lib/mongodb";
 import { ADMIN_COOKIE_NAME, verifyAdminSession } from "@/lib/admin-session";
+import { notifyAppointmentSubmission } from "@/lib/email-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -181,7 +183,6 @@ export async function PATCH(request) {
       { returnDocument: "after" },
     );
 
-    // Handle both common MongoDB driver return formats.
     const updatedAppointment = result?.value ?? result;
 
     if (!updatedAppointment?._id) {
@@ -300,6 +301,17 @@ export async function POST(request) {
     };
 
     const result = await db.collection("appointments").insertOne(appointment);
+
+    // Send notification only after MongoDB confirms the appointment was saved.
+    // Notification errors must not invalidate the saved appointment.
+    try {
+      await notifyAppointmentSubmission({
+        ...appointment,
+        id: result.insertedId.toString(),
+      });
+    } catch (notificationError) {
+      console.error("Appointment notification failed:", notificationError);
+    }
 
     return NextResponse.json(
       {
