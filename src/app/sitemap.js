@@ -1,12 +1,6 @@
-
-import { blogs } from "@/data/blog";
 import { locations } from "@/data/locations";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
-
-if (!SITE_URL) {
-  throw new Error("NEXT_PUBLIC_SITE_URL is not configured.");
-}
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
 
 const routes = [
   "",
@@ -24,30 +18,25 @@ const routes = [
 ];
 
 export default function sitemap() {
+  if (!SITE_URL) {
+    throw new Error(
+      "NEXT_PUBLIC_SITE_URL is not configured. Add it to your environment variables.",
+    );
+  }
+
   const staticPages = routes.map((route) => ({
-    url: `${SITE_URL.replace(/\/$/, "")}${route || "/"}`,
+    url: `${SITE_URL}${route || "/"}`,
     changeFrequency: route === "" ? "weekly" : "monthly",
     priority: route === "" ? 1 : 0.7,
   }));
 
-  const publishedBlogs = blogs
-    .filter((post) => post.status === "published")
-    .map((post) => ({
-      url: `${SITE_URL.replace(/\/$/, "")}/blog/${post.slug}`,
-      changeFrequency: "monthly",
-      priority: 0.6,
-      ...(post.updatedAt
-        ? { lastModified: new Date(post.updatedAt) }
-        : {}),
-    }));
-
   const publishedLocations = locations
     .filter((location) => location.status === "published")
     .map((location) => ({
-      url: `${SITE_URL.replace(/\/$/, "")}/locations/${location.slug}`,
+      url: `${SITE_URL}/locations/${location.slug}`,
       changeFrequency: "monthly",
       priority: 0.6,
     }));
 
-  return [...staticPages, ...publishedBlogs, ...publishedLocations];
+  return [...staticPages, ...publishedLocations];
 }
