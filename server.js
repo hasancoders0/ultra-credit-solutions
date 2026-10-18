@@ -1,24 +1,13 @@
+const { createServer } = require("http");
+const next = require("next");
 
-const { spawn } = require("node:child_process");
+const app = next({ dev: false });
+const handle = app.getRequestHandler();
 
-const isWindows = process.platform === "win32";
-const nextBin = require.resolve("next/dist/bin/next");
-
-const child = spawn(
-  process.execPath,
-  [nextBin, "start", "--hostname", "0.0.0.0", "--port", process.env.PORT || "3000"],
-  {
-    stdio: "inherit",
-    env: process.env,
-    shell: isWindows,
-  },
-);
-
-child.on("exit", (code) => {
-  process.exitCode = code ?? 1;
-});
-
-child.on("error", (error) => {
-  console.error("Failed to start Next.js:", error);
-  process.exitCode = 1;
+app.prepare().then(() => {
+  createServer((req, res) => {
+    handle(req, res);
+  }).listen(3000, () => {
+    console.log("Server running on port 3000");
+  });
 });
